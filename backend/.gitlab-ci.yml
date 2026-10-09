@@ -1,0 +1,79 @@
+stages:
+  - build
+  - test
+  - deploy
+
+include:
+  - template: Jobs/SAST.gitlab-ci.yml
+  - template: Jobs/Secret-Detection.gitlab-ci.yml
+  - template: Jobs/Dependency-Scanning.gitlab-ci.yml
+  - template: Jobs/Container-Scanning.gitlab-ci.yml
+
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "master"'
+
+variables:
+  AST_ENABLE_MR_PIPELINES: 'true'
+  IMAGE_NAME: registry.gitlab.com/multitechbr/engenharia/sim/softwares/web/iris/backend:latest
+  IMAGE_BRANCH: registry.gitlab.com/multitechbr/engenharia/sim/softwares/web/iris/backend:$CI_COMMIT_REF_SLUG
+  COMPOSE_FILE: '/var/www/iris/docker-compose.yml'
+
+build_backend:
+  stage: build
+  tags:
+    - sync-deploy
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build --pull -t $IMAGE_NAME .
+    - docker push $IMAGE_NAME
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "master"'
+      when: always
+    - when: never
+
+build_backend_mr:
+  stage: build
+  tags:
+    - sync-deploy
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build --pull -t $IMAGE_BRANCH .
+    - docker push $IMAGE_BRANCH
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: always
+    - when: never
+
+container_scanning:
+  needs:
+    - job: build_backend
+      optional: true
+    - job: build_backend_mr
+      optional: true
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      variables:
+        CS_IMAGE: $IMAGE_BRANCH
+      when: always
+    - if: '$CI_COMMIT_BRANCH == "master"'
+      variables:
+        CS_IMAGE: $IMAGE_NAME
+      when: always
+    - when: never
+
+deploy_backend:
+  stage: deploy
+  tags:
+    - sync-deploy
+  needs: ['build_backend']
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker pull $IMAGE_NAME
+    - docker-compose -f $COMPOSE_FILE up -d iris-api
+    - docker image prune -f --filter "label=service=backend"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "master"'
+      when: always
+    - when: never

@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="../IrisWeb.Application/IrisWeb.Application.csproj" />
+  <Project Path="../IrisWeb.Domain/IrisWeb.Domain.csproj" />
+  <Project Path="../IrisWeb.Infrastructure/IrisWeb.Infrastructure.csproj" />
+  <Project Path="IrisWeb.API.csproj" />
+</Solution>

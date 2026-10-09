@@ -1,0 +1,3 @@
+namespace IrisWeb.Application.Communication.Roles.Responses;
+
+public sealed record RoleResponse(ulong Id, string Name, string Description);
