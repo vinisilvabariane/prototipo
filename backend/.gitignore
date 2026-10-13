@@ -10,12 +10,12 @@ artifacts/
 .idea/
 *.swp
 
-IrisWeb.API/Data/
+MeOne.API/Data/
 
 *.pfx
 *.p12
 *.pem
 appsettings.*.local.json
 
-IrisWeb.API/wwwroot/*
-!IrisWeb.API/wwwroot/.gitkeep
+MeOne.API/wwwroot/*
+!MeOne.API/wwwroot/.gitkeep

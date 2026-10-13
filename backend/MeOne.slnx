@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="MeOne.API/MeOne.API.csproj" />
+  <Project Path="MeOne.Application/MeOne.Application.csproj" />
+  <Project Path="MeOne.Domain/MeOne.Domain.csproj" />
+  <Project Path="MeOne.Infrastructure/MeOne.Infrastructure.csproj" />
+  <Project Path="MeOne.Tests/MeOne.Tests.csproj" />
+</Solution>

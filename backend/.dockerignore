@@ -3,10 +3,10 @@
 **/.vs/
 **/.idea/
 
-IrisWeb.API/Data/
+MeOne.API/Data/
 
-IrisWeb.API/wwwroot/*
-!IrisWeb.API/wwwroot/.gitkeep
+MeOne.API/wwwroot/*
+!MeOne.API/wwwroot/.gitkeep
 
 **/*.pem
 **/*.pfx

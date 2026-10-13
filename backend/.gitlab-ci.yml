@@ -16,9 +16,9 @@ workflow:
 
 variables:
   AST_ENABLE_MR_PIPELINES: 'true'
-  IMAGE_NAME: registry.gitlab.com/multitechbr/engenharia/sim/softwares/web/iris/backend:latest
-  IMAGE_BRANCH: registry.gitlab.com/multitechbr/engenharia/sim/softwares/web/iris/backend:$CI_COMMIT_REF_SLUG
-  COMPOSE_FILE: '/var/www/iris/docker-compose.yml'
+  IMAGE_NAME: registry.gitlab.com/multitechbr/engenharia/sim/softwares/web/meone/backend:latest
+  IMAGE_BRANCH: registry.gitlab.com/multitechbr/engenharia/sim/softwares/web/meone/backend:$CI_COMMIT_REF_SLUG
+  COMPOSE_FILE: '/var/www/meone/docker-compose.yml'
 
 build_backend:
   stage: build
@@ -71,7 +71,7 @@ deploy_backend:
   script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
     - docker pull $IMAGE_NAME
-    - docker-compose -f $COMPOSE_FILE up -d iris-api
+    - docker-compose -f $COMPOSE_FILE up -d meone-api
     - docker image prune -f --filter "label=service=backend"
   rules:
     - if: '$CI_COMMIT_BRANCH == "master"'

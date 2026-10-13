@@ -1,0 +1,21 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: meone-mysql
+    environment:
+      MYSQL_DATABASE: meone
+      MYSQL_USER: meone
+      MYSQL_PASSWORD: meone
+      MYSQL_ROOT_PASSWORD: meone-root
+    ports:
+      - "3306:3306"
+    volumes:
+      - meone-mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-umeone", "-pmeone"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  meone-mysql:
