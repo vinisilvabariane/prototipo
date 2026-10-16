@@ -1,7 +1,36 @@
 @import "tailwindcss";
 
 @theme inline {
-  --font-sans: var(--font-dm-sans);
-  --font-mono: var(--font-jetbrains-mono);
-  --font-display: var(--font-sora);
+  --font-sans: var(--font-google-sans);
+}
+
+html[data-font-size="sm"] {
+  font-size: 87.5%;
+}
+
+html[data-font-size="lg"] {
+  font-size: 112.5%;
+}
+
+html[data-font-size="xl"] {
+  font-size: 125%;
+}
+
+html[data-line-height="relaxed"] {
+  --mo-line-height: 1.8;
+}
+
+html[data-motion="reduced"] *,
+html[data-motion="reduced"] *::before,
+html[data-motion="reduced"] *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}
+
+kbd,
+code,
+pre,
+samp {
+  font-family: inherit;
 }

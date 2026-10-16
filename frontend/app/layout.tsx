@@ -1,29 +1,19 @@
 import type { Metadata } from "next";
-import { DM_Sans, JetBrains_Mono, Sora } from "next/font/google";
+import { Google_Sans } from "next/font/google";
+import InitColorSchemeScript from "@mui/material/InitColorSchemeScript";
 import { AppRouterCacheProvider } from "@mui/material-nextjs/v16-appRouter";
 import Providers from "@/components/providers/Providers";
+import { prefsBootScript } from "@/lib/prefs/bootScript";
 import "./globals.css";
 
-const sora = Sora({
-  variable: "--font-sora",
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
-});
-
-const dmSans = DM_Sans({
-  variable: "--font-dm-sans",
+const googleSans = Google_Sans({
+  variable: "--font-google-sans",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
 });
 
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-jetbrains-mono",
-  subsets: ["latin"],
-  weight: ["400", "500"],
-});
-
 export const metadata: Metadata = {
-  title: "MeOne",
+  title: { default: "MeOne", template: "%s · MeOne" },
   description: "Controle de acesso",
 };
 
@@ -31,9 +21,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="pt-BR"
-      className={`${sora.variable} ${dmSans.variable} ${jetbrainsMono.variable} h-full antialiased`}
+      className={`${googleSans.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
+        <InitColorSchemeScript attribute="data-mui-color-scheme" defaultMode="light" />
+        <script dangerouslySetInnerHTML={{ __html: prefsBootScript }} />
         <AppRouterCacheProvider>
           <Providers>{children}</Providers>
         </AppRouterCacheProvider>

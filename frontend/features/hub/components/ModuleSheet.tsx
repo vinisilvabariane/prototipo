@@ -8,9 +8,9 @@ import Card from "@mui/material/Card";
 import IconButton from "@mui/material/IconButton";
 import { keyframes } from "@mui/material/styles";
 import Typography from "@mui/material/Typography";
-import { brand, brandDeep, brandSoft, displayFont, easeOut, inkSoft, line, monoFont } from "@/lib/tokens";
+import { brand, brandDeep, brandSoft, easeOut, inkSoft, line } from "@/lib/tokens";
 import type { HubModule } from "../modules";
-import { MAX_PINNED, recordVisit, togglePin, useHubPrefs } from "../store";
+import { HOTKEYS, recordVisit, togglePin, useHubPrefs } from "../store";
 
 const rise = keyframes`
   from { opacity: 0; transform: translateY(10px); }
@@ -30,7 +30,7 @@ type Props = {
 export default function ModuleSheet({ module, groupName, counts }: Props) {
   const { pinned } = useHubPrefs();
   const active = module.status === "active";
-  const pinsFull = pinned.length >= MAX_PINNED;
+  const hasPlanned = active && module.functions.some((fn) => !fn.href);
 
   return (
     <Card>
@@ -56,12 +56,12 @@ export default function ModuleSheet({ module, groupName, counts }: Props) {
           </Box>
         </Box>
 
-        <Typography sx={{ mt: 2.5, fontFamily: monoFont, fontSize: "0.78rem", letterSpacing: "0.1em", color: inkSoft, ...step(1) }}>
+        <Typography sx={{ mt: 2.5, fontVariantNumeric: "tabular-nums", fontSize: "0.78rem", letterSpacing: "0.1em", color: inkSoft, ...step(1) }}>
           {module.code}
         </Typography>
         <Typography
           component="h2"
-          sx={{ fontFamily: displayFont, fontWeight: 600, fontSize: "1.7rem", lineHeight: 1.1, letterSpacing: "-0.03em", mt: 0.5, ...step(2) }}
+          sx={{ fontWeight: 600, fontSize: "1.7rem", lineHeight: 1.1, letterSpacing: "-0.03em", mt: 0.5, ...step(2) }}
         >
           {module.name}
         </Typography>
@@ -70,7 +70,9 @@ export default function ModuleSheet({ module, groupName, counts }: Props) {
         <Box component="ul" sx={{ listStyle: "none", m: 0, mt: 3, p: 0, borderTop: `1px solid ${line}` }}>
           {module.functions.map((fn, index) => {
             const href = active ? fn.href : undefined;
-            const slot = href ? pinned.indexOf(href) + 1 : 0;
+            const position = href ? pinned.indexOf(href) + 1 : 0;
+            const pinnedHere = position > 0;
+            const hotkey = pinnedHere && position <= HOTKEYS ? position : 0;
 
             return (
               <Box
@@ -98,37 +100,37 @@ export default function ModuleSheet({ module, groupName, counts }: Props) {
                     {fn.label}
                   </Box>
                 ) : (
-                  <Typography sx={{ flex: 1, py: 1.5, color: inkSoft }}>{fn.label}</Typography>
+                  <Typography sx={{ flex: 1, py: 1.5, color: inkSoft }}>
+                    {fn.label}
+                    {active && (
+                      <Box component="span" sx={{ ml: 1, fontSize: "0.74rem", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                        em breve
+                      </Box>
+                    )}
+                  </Typography>
                 )}
 
                 {href && counts?.[href] !== undefined && (
-                  <Box component="span" sx={{ fontFamily: monoFont, fontSize: "0.82rem", color: inkSoft }}>
+                  <Box component="span" sx={{ fontVariantNumeric: "tabular-nums", fontSize: "0.82rem", color: inkSoft }}>
                     {counts[href]}
                   </Box>
                 )}
 
                 {href && (
                   <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                    {slot > 0 && (
-                      <Box component="kbd" sx={{ fontFamily: monoFont, fontSize: "0.7rem", px: 0.75, border: `1px solid ${line}`, borderRadius: "6px", color: inkSoft }}>
-                        {slot}
+                    {hotkey > 0 && (
+                      <Box component="kbd" sx={{ fontVariantNumeric: "tabular-nums", fontSize: "0.7rem", px: 0.75, border: `1px solid ${line}`, borderRadius: "6px", color: inkSoft }}>
+                        {hotkey}
                       </Box>
                     )}
                     <IconButton
                       size="small"
-                      aria-pressed={slot > 0}
-                      aria-label={
-                        slot > 0
-                          ? `Remover ${fn.label} das teclas de atalho`
-                          : pinsFull
-                            ? "Todas as 8 teclas de atalho estão em uso"
-                            : `Fixar ${fn.label} numa tecla de atalho`
-                      }
-                      disabled={slot === 0 && pinsFull}
+                      aria-pressed={pinnedHere}
+                      aria-label={pinnedHere ? `Remover ${fn.label} dos atalhos` : `Fixar ${fn.label} nos atalhos`}
                       onClick={() => togglePin(href)}
-                      sx={{ color: slot > 0 ? brand : inkSoft }}
+                      sx={{ color: pinnedHere ? brand : inkSoft }}
                     >
-                      {slot > 0 ? <PushPin sx={{ fontSize: 18 }} /> : <PushPinOutlined sx={{ fontSize: 18 }} />}
+                      {pinnedHere ? <PushPin sx={{ fontSize: 18 }} /> : <PushPinOutlined sx={{ fontSize: 18 }} />}
                     </IconButton>
                   </Box>
                 )}
@@ -140,6 +142,11 @@ export default function ModuleSheet({ module, groupName, counts }: Props) {
         {!active && (
           <Typography variant="body2" sx={{ mt: 2, color: inkSoft, ...step(8) }}>
             Este módulo ainda não foi liberado. As funções acima mostram o que ele vai cobrir.
+          </Typography>
+        )}
+        {hasPlanned && (
+          <Typography variant="body2" sx={{ mt: 2, color: inkSoft, ...step(8) }}>
+            As funções marcadas como “em breve” ainda não foram liberadas.
           </Typography>
         )}
       </Box>

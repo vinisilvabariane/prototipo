@@ -5,7 +5,7 @@ import Typography from "@mui/material/Typography";
 import { keyframes } from "@mui/material/styles";
 import LogoMark from "@/components/ui/LogoMark";
 import { allModules, availableModules } from "@/features/hub/modules";
-import { displayFont, ink } from "@/lib/tokens";
+import { ink } from "@/lib/tokens";
 
 const COLUMNS = 5;
 
@@ -32,7 +32,7 @@ export default function BrandPanel() {
     >
       <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
         <LogoMark size={26} tone="dark" />
-        <Typography sx={{ fontFamily: displayFont, fontWeight: 600, fontSize: "1.5rem", letterSpacing: "-0.03em" }}>
+        <Typography sx={{ fontWeight: 600, fontSize: "1.5rem", letterSpacing: "-0.03em" }}>
           MeOne
         </Typography>
       </Box>
@@ -58,7 +58,7 @@ export default function BrandPanel() {
                   borderColor: active ? "#FFFFFF" : "rgba(255, 255, 255, 0.2)",
                   bgcolor: active ? "#FFFFFF" : "transparent",
                   color: active ? ink : "#FFFFFF",
-                  fontFamily: displayFont,
+                  
                   fontWeight: 600,
                   fontSize: "0.95rem",
                   opacity: active ? 1 : 0.5,

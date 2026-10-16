@@ -30,11 +30,23 @@ export const hubGroups: HubGroup[] = [
         ],
       },
       {
+        code: "ORG",
+        name: "Organograma",
+        description: "Cargos, quem ocupa cada um e quem responde a quem.",
+        status: "active",
+        functions: [{ label: "Organograma", href: "/org-chart" }],
+      },
+      {
         code: "CFG",
         name: "Configurações",
-        description: "Plantas, áreas e turnos da fábrica.",
-        status: "soon",
-        functions: [{ label: "Plantas e áreas" }, { label: "Turnos" }, { label: "Parâmetros do sistema" }],
+        description: "Aparência e acessibilidade do sistema. Em breve, plantas, áreas e turnos da fábrica.",
+        status: "active",
+        functions: [
+          { label: "Aparência e acessibilidade", href: "/settings" },
+          { label: "Plantas e áreas" },
+          { label: "Turnos" },
+          { label: "Parâmetros do sistema" },
+        ],
       },
     ],
   },
@@ -67,6 +79,27 @@ export const hubGroups: HubGroup[] = [
     ],
   },
   {
+    id: "engenharia",
+    name: "Engenharia",
+    description: "Processos e aprovações",
+    modules: [
+      {
+        code: "WFL",
+        name: "Workflow",
+        description: "Fluxos de aprovação com responsáveis, justificativas e histórico completo.",
+        status: "active",
+        functions: [{ label: "Workflows", href: "/workflows" }],
+      },
+      {
+        code: "INT",
+        name: "Instruções de trabalho",
+        description: "Como cada operação é executada: EPI, especificações, passos ilustrados e PDF.",
+        status: "active",
+        functions: [{ label: "Instruções de trabalho", href: "/instructions" }],
+      },
+    ],
+  },
+  {
     id: "producao",
     name: "Produção",
     description: "Postos do chão de fábrica",
@@ -81,9 +114,13 @@ export const hubGroups: HubGroup[] = [
       {
         code: "LIN",
         name: "Linhas e postos",
-        description: "Situação de cada linha em tempo real.",
-        status: "soon",
-        functions: [{ label: "Painel de linha" }, { label: "Andon" }, { label: "Setup e troca de modelo" }],
+        description: "Monte o mapa de cada linha, aloque pessoas nos postos, inicie a produção e acompanhe a produtividade por posto.",
+        status: "active",
+        functions: [
+          { label: "Painel de produção", href: "/production" },
+          { label: "Layouts de linha", href: "/production/layouts" },
+          { label: "Cadastros de produção", href: "/production/setup" },
+        ],
       },
       {
         code: "OEE",
@@ -97,8 +134,15 @@ export const hubGroups: HubGroup[] = [
   {
     id: "qualidade",
     name: "Qualidade",
-    description: "Inspeção e metrologia",
+    description: "Fornecedores, inspeção e metrologia",
     modules: [
+      {
+        code: "FOR",
+        name: "Fornecedores",
+        description: "Cadastro, auto avaliações, auditorias, certificados e documentos de cada fornecedor.",
+        status: "active",
+        functions: [{ label: "Fornecedores", href: "/suppliers" }],
+      },
       {
         code: "INS",
         name: "Inspeção",

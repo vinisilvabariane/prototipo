@@ -5,16 +5,17 @@ import { failure, failureFromResponse, ok, type Result } from "@/lib/result";
 import { getToken } from "./session";
 
 const TIMEOUT_MS = 15_000;
+const UPLOAD_TIMEOUT_MS = 90_000;
 
-type Options = { anonymous?: boolean };
+type Options = { anonymous?: boolean; timeoutMs?: number };
 
 export abstract class BaseService {
   constructor(protected readonly basePath: string) {}
 
-  protected async request<T>(path: string, init: RequestInit = {}, { anonymous }: Options = {}): Promise<Result<T>> {
+  private async send(path: string, init: RequestInit, { anonymous, timeoutMs = TIMEOUT_MS }: Options): Promise<Result<Response>> {
     const method = init.method ?? "GET";
     const headers = new Headers(init.headers);
-    if (init.body) headers.set("Content-Type", "application/json");
+    if (init.body && !(init.body instanceof FormData)) headers.set("Content-Type", "application/json");
 
     if (!anonymous) {
       const token = await getToken();
@@ -27,7 +28,7 @@ export abstract class BaseService {
       res = await fetch(`${apiUrl()}/api/v1${this.basePath}${path}`, {
         ...init,
         headers,
-        signal: AbortSignal.timeout(TIMEOUT_MS),
+        signal: AbortSignal.timeout(timeoutMs),
       });
     } catch (e) {
       unstable_rethrow(e);
@@ -44,14 +45,26 @@ export abstract class BaseService {
       return failureFromResponse(res.status, body);
     }
 
+    return ok(res);
+  }
+
+  protected async request<T>(path: string, init: RequestInit = {}, options: Options = {}): Promise<Result<T>> {
+    const sent = await this.send(path, init, options);
+    if (!sent.ok) return sent;
+
+    const res = sent.value;
     if (res.status === 204) return ok(undefined as T);
 
     try {
       return ok((await res.json()) as T);
     } catch {
-      console.error(`[api] ${method} ${this.basePath}${path} -> ${res.status} com corpo que não é JSON`);
+      console.error(`[api] ${init.method ?? "GET"} ${this.basePath}${path} -> ${res.status} com corpo que não é JSON`);
       return failure("unexpected", { status: res.status });
     }
+  }
+
+  protected stream(path: string) {
+    return this.send(path, {}, { timeoutMs: UPLOAD_TIMEOUT_MS });
   }
 
   protected get<T>(path = "") {
@@ -60,6 +73,14 @@ export abstract class BaseService {
 
   protected post<T = void>(path: string, body?: unknown, options?: Options) {
     return this.request<T>(path, { method: "POST", body: JSON.stringify(body) }, options);
+  }
+
+  protected postForm<T = void>(path: string, body: FormData) {
+    return this.request<T>(path, { method: "POST", body }, { timeoutMs: UPLOAD_TIMEOUT_MS });
+  }
+
+  protected putForm<T = void>(path: string, body: FormData) {
+    return this.request<T>(path, { method: "PUT", body }, { timeoutMs: UPLOAD_TIMEOUT_MS });
   }
 
   protected put<T = void>(path: string, body: unknown) {

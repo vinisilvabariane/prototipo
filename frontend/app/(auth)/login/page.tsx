@@ -1,6 +1,12 @@
+import type { Metadata } from "next";
 import Box from "@mui/material/Box";
 import BrandPanel from "@/features/auth/components/BrandPanel";
 import LoginForm from "@/features/auth/components/LoginForm";
+
+export const metadata: Metadata = {
+  title: "Entrar",
+  description: "Acesse o MeOne com sua matrícula e senha.",
+};
 
 export default function LoginPage() {
   return (

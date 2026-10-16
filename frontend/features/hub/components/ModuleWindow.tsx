@@ -3,7 +3,7 @@
 import Box from "@mui/material/Box";
 import ButtonBase from "@mui/material/ButtonBase";
 import { keyframes } from "@mui/material/styles";
-import { brand, brandDeep, brandWash, displayFont, easeOut, ink, inkSoft, line } from "@/lib/tokens";
+import { brand, brandDeep, brandWash, easeOut, ink, inkSoft, line, onInk, onInkSoft } from "@/lib/tokens";
 import type { HubModule } from "../modules";
 
 const fadeIn = keyframes`
@@ -48,7 +48,7 @@ export default function ModuleWindow({ module, index, selected, dimmed, onSelect
         borderRadius: "14px",
         border: `1px solid ${active ? ink : line}`,
         bgcolor: active ? ink : "transparent",
-        color: active ? "#FFFFFF" : ink,
+        color: active ? onInk : ink,
         opacity: dimmed ? 0.22 : 1,
         transition: "opacity 0.3s ease",
         "&::before": {
@@ -70,7 +70,7 @@ export default function ModuleWindow({ module, index, selected, dimmed, onSelect
         },
       }}
     >
-      <Box sx={{ fontFamily: displayFont, fontWeight: 600, fontSize: "1.5rem", lineHeight: 1, letterSpacing: "-0.02em" }}>
+      <Box sx={{ fontWeight: 600, fontSize: "1.5rem", lineHeight: 1, letterSpacing: "-0.02em" }}>
         {module.code}
       </Box>
       <Box
@@ -78,9 +78,9 @@ export default function ModuleWindow({ module, index, selected, dimmed, onSelect
           fontSize: "0.76rem",
           fontWeight: 500,
           lineHeight: 1.25,
-          color: active ? "rgba(255, 255, 255, 0.72)" : inkSoft,
+          color: active ? onInkSoft : inkSoft,
           display: "-webkit-box",
-          WebkitLineClamp: 2,
+          WebkitLineClamp: 3,
           WebkitBoxOrient: "vertical",
           overflow: "hidden",
         }}

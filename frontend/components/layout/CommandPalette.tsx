@@ -11,7 +11,6 @@ import { HubIcon } from "@/features/hub/icons";
 import { findEntry, isLinkable, type HubEntry } from "@/features/hub/modules";
 import { searchEntries } from "@/features/hub/search";
 import { recordVisit, useHubPrefs } from "@/features/hub/store";
-import { monoFont } from "@/lib/tokens";
 
 type Props = { open: boolean; onClose: () => void };
 
@@ -133,7 +132,7 @@ function PaletteBody({ onClose }: { onClose: () => void }) {
               <Typography sx={{ fontSize: "0.8rem", color: "text.secondary" }}>
                 {linkable ? entry.group.name : "Em breve"}
               </Typography>
-              <Typography sx={{ minWidth: 34, textAlign: "right", fontFamily: monoFont, fontSize: "0.7rem", letterSpacing: "0.08em", color: "text.secondary" }}>
+              <Typography sx={{ minWidth: 34, textAlign: "right", fontVariantNumeric: "tabular-nums", fontSize: "0.7rem", letterSpacing: "0.08em", color: "text.secondary" }}>
                 {entry.module.code}
               </Typography>
             </Box>

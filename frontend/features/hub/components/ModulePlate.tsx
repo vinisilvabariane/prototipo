@@ -6,7 +6,6 @@ import Typography from "@mui/material/Typography";
 import { brand, easeOut, inkSoft, line } from "@/lib/tokens";
 import { allModules, hubGroups } from "../modules";
 import ModuleWindow from "./ModuleWindow";
-import SoftKeys from "./SoftKeys";
 
 type Props = {
   selected: string;
@@ -94,10 +93,6 @@ export default function ModulePlate({ selected, matches, onSelect }: Props) {
           </Box>
         </Box>
       ))}
-
-      <Box sx={{ mt: 1, pt: 3, borderTop: `1px solid ${line}` }}>
-        <SoftKeys />
-      </Box>
 
       <Box
         aria-hidden

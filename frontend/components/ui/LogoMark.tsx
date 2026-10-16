@@ -1,11 +1,11 @@
 import Box from "@mui/material/Box";
-import { brand } from "@/lib/tokens";
+import { brand, logoOutline } from "@/lib/tokens";
 
 type Props = { size?: number; tone?: "light" | "dark" };
 
 export default function LogoMark({ size = 22, tone = "light" }: Props) {
   const filled = tone === "light" ? brand : "#FFFFFF";
-  const outline = tone === "light" ? "rgba(10, 19, 48, 0.35)" : "rgba(255, 255, 255, 0.45)";
+  const outline = tone === "light" ? logoOutline : "rgba(255, 255, 255, 0.45)";
   const gap = Math.max(2, Math.round(size / 9));
   const radius = Math.round(size / 6);
 

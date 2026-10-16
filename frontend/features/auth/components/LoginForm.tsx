@@ -8,7 +8,7 @@ import { keyframes } from "@mui/material/styles";
 import Typography from "@mui/material/Typography";
 import ErrorAlert from "@/components/ui/ErrorAlert";
 import LogoMark from "@/components/ui/LogoMark";
-import { displayFont, easeOut, ink } from "@/lib/tokens";
+import { easeOut } from "@/lib/tokens";
 import { login } from "../actions/authActions";
 
 const rise = keyframes`
@@ -34,7 +34,7 @@ export default function LoginForm() {
       <Stack spacing={1.5}>
         <Stack direction="row" spacing={1.25} sx={{ alignItems: "center", display: { md: "none" }, ...enter(0) }}>
           <LogoMark />
-          <Typography sx={{ fontFamily: displayFont, fontWeight: 600, fontSize: "1.2rem", letterSpacing: "-0.03em" }}>
+          <Typography sx={{ fontWeight: 600, fontSize: "1.2rem", letterSpacing: "-0.03em" }}>
             MeOne
           </Typography>
         </Stack>
@@ -62,7 +62,7 @@ export default function LoginForm() {
           variant="contained"
           size="large"
           disabled={pending}
-          sx={{ py: 1.4, bgcolor: ink, "&:hover": { bgcolor: "#16235A" } }}
+          sx={{ py: 1.4 }}
         >
           {pending ? "Verificando..." : "Entrar"}
         </Button>

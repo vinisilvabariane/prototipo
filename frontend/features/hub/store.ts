@@ -2,7 +2,7 @@ import { useSyncExternalStore } from "react";
 
 export type HubPrefs = { pinned: string[]; recent: string[] };
 
-export const MAX_PINNED = 8;
+export const HOTKEYS = 9;
 const MAX_RECENT = 6;
 const STORAGE_KEY = "meone.hub";
 const EMPTY: HubPrefs = { pinned: [], recent: [] };
@@ -19,7 +19,7 @@ function parse(raw: string | null): HubPrefs {
   if (!raw) return EMPTY;
   try {
     const data = JSON.parse(raw);
-    return { pinned: strings(data.pinned).slice(0, MAX_PINNED), recent: strings(data.recent).slice(0, MAX_RECENT) };
+    return { pinned: strings(data.pinned), recent: strings(data.recent).slice(0, MAX_RECENT) };
   } catch {
     return EMPTY;
   }
@@ -67,7 +67,6 @@ export const useHubPrefs = () => useSyncExternalStore(subscribe, snapshot, () =>
 export function togglePin(href: string) {
   const { pinned, recent } = snapshot();
   if (pinned.includes(href)) return save({ pinned: pinned.filter((h) => h !== href), recent });
-  if (pinned.length >= MAX_PINNED) return;
   save({ pinned: [...pinned, href], recent });
 }
 

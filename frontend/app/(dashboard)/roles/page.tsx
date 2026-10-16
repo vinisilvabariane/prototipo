@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Card from "@mui/material/Card";
 import Stack from "@mui/material/Stack";
 import Table from "@mui/material/Table";
@@ -13,6 +14,11 @@ import Pager from "@/components/ui/Pager";
 import { createRole, deleteRole, updateRole } from "@/features/roles/actions/roleActions";
 import RoleFields from "@/features/roles/components/RoleFields";
 import { roleService } from "@/features/roles/services/RoleService";
+
+export const metadata: Metadata = {
+  title: "Perfis",
+  description: "Perfis de acesso do sistema.",
+};
 
 export default async function RolesPage({ searchParams }: PageProps<"/roles">) {
   const params = await searchParams;

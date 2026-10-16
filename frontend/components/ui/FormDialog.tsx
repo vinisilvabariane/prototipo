@@ -18,18 +18,27 @@ type Props = {
   action: FormAction;
   children: ReactNode;
   compact?: boolean;
+  maxWidth?: "xs" | "sm" | "md";
+  submitLabel?: string;
+  color?: "primary" | "error" | "success";
+  variant?: "contained" | "outlined" | "text";
 };
 
-export default function FormDialog({ title, trigger, action, children, compact }: Props) {
+export default function FormDialog({ title, trigger, action, children, compact, maxWidth = "xs", submitLabel = "Salvar", color = "primary", variant }: Props) {
   const [open, setOpen] = useState(false);
 
   return (
     <>
-      <Button variant={compact ? "text" : "contained"} size={compact ? "small" : "medium"} onClick={() => setOpen(true)}>
+      <Button
+        variant={variant ?? (compact ? "text" : "contained")}
+        size={compact ? "small" : "medium"}
+        color={color}
+        onClick={() => setOpen(true)}
+      >
         {trigger}
       </Button>
-      <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="xs">
-        <DialogForm title={title} action={action} onClose={() => setOpen(false)}>
+      <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth={maxWidth}>
+        <DialogForm title={title} action={action} submitLabel={submitLabel} color={color} onClose={() => setOpen(false)}>
           {children}
         </DialogForm>
       </Dialog>
@@ -37,7 +46,16 @@ export default function FormDialog({ title, trigger, action, children, compact }
   );
 }
 
-function DialogForm({ title, action, onClose, children }: { title: string; action: FormAction; onClose: () => void; children: ReactNode }) {
+type DialogFormProps = {
+  title: string;
+  action: FormAction;
+  submitLabel: string;
+  color: "primary" | "error" | "success";
+  onClose: () => void;
+  children: ReactNode;
+};
+
+function DialogForm({ title, action, submitLabel, color, onClose, children }: DialogFormProps) {
   const [result, formAction, pending] = useActionState(async (prev: Result | undefined, formData: FormData) => {
     const next = await action(prev, formData);
     if (next.ok) onClose();
@@ -61,8 +79,8 @@ function DialogForm({ title, action, onClose, children }: { title: string; actio
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancelar</Button>
-        <Button type="submit" variant="contained" disabled={pending}>
-          {pending ? "Salvando..." : "Salvar"}
+        <Button type="submit" variant="contained" color={color} disabled={pending}>
+          {pending ? "Salvando..." : submitLabel}
         </Button>
       </DialogActions>
     </form>

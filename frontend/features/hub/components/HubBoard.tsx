@@ -11,12 +11,14 @@ import { keyframes } from "@mui/material/styles";
 import Typography from "@mui/material/Typography";
 import ErrorAlert from "@/components/ui/ErrorAlert";
 import type { AppError } from "@/lib/result";
-import { brand, easeOut, inkSoft, line, lineStrong, monoFont } from "@/lib/tokens";
+import { brand, easeOut, inkSoft, line, lineStrong } from "@/lib/tokens";
 import { allModules, availableModules, hubGroups, isLinkable } from "../modules";
 import { moduleMatches, searchEntries } from "../search";
-import { MAX_PINNED, recordVisit, useHubPrefs } from "../store";
+import { HOTKEYS, recordVisit, useHubPrefs } from "../store";
 import ModulePlate from "./ModulePlate";
 import ModuleSheet from "./ModuleSheet";
+import LiveClock from "./LiveClock";
+import SoftKeys from "./SoftKeys";
 
 const rise = keyframes`
   from { opacity: 0; transform: translateY(10px); }
@@ -66,7 +68,7 @@ export default function HubBoard({ counts, error }: Props) {
       }
 
       const slot = Number(e.key);
-      const href = slot >= 1 && slot <= MAX_PINNED ? pinned[slot - 1] : undefined;
+      const href = slot >= 1 && slot <= HOTKEYS ? pinned[slot - 1] : undefined;
       if (href) {
         recordVisit(href);
         router.push(href);
@@ -114,12 +116,8 @@ export default function HubBoard({ counts, error }: Props) {
           </Typography>
         </Box>
 
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1, color: inkSoft, fontSize: "0.82rem", ...enter(1) }}>
-          <Box
-            aria-hidden
-            sx={{ width: 8, height: 8, borderRadius: "50%", border: `1.5px solid ${brand}`, bgcolor: error ? "transparent" : brand }}
-          />
-          {error ? "API indisponível" : "API online"}
+        <Box sx={enter(1)}>
+          <LiveClock />
         </Box>
       </Box>
 
@@ -157,7 +155,7 @@ export default function HubBoard({ counts, error }: Props) {
                   <Box
                     component="kbd"
                     aria-hidden
-                    sx={{ fontFamily: monoFont, fontSize: "0.72rem", px: 0.75, border: `1px solid ${line}`, borderRadius: "6px", color: inkSoft }}
+                    sx={{ fontVariantNumeric: "tabular-nums", fontSize: "0.72rem", px: 0.75, border: `1px solid ${line}`, borderRadius: "6px", color: inkSoft }}
                   >
                     /
                   </Box>
@@ -172,6 +170,10 @@ export default function HubBoard({ counts, error }: Props) {
             Nenhum módulo corresponde a “{search}”. Busque pelo nome, pelo código (ex.: PCP) ou por uma função.
           </Typography>
         )}
+      </Box>
+
+      <Box sx={enter(3)}>
+        <SoftKeys />
       </Box>
 
       <Box

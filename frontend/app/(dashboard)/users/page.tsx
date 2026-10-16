@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
@@ -13,12 +14,17 @@ import ConfirmDeleteButton from "@/components/ui/ConfirmDeleteButton";
 import FormDialog from "@/components/ui/FormDialog";
 import PageError from "@/components/ui/PageError";
 import Pager from "@/components/ui/Pager";
+import TextLink from "@/components/ui/TextLink";
 import { departmentService } from "@/features/departments/services/DepartmentService";
 import { createUser, deleteUser, updateUser } from "@/features/users/actions/userActions";
 import UserFields from "@/features/users/components/UserFields";
 import { userService } from "@/features/users/services/UserService";
 import { all } from "@/lib/result";
-import { monoFont } from "@/lib/tokens";
+
+export const metadata: Metadata = {
+  title: "Usuários",
+  description: "Cadastro e consulta de usuários do sistema.",
+};
 
 export default async function UsersPage({ searchParams }: PageProps<"/users">) {
   const params = await searchParams;
@@ -61,8 +67,10 @@ export default async function UsersPage({ searchParams }: PageProps<"/users">) {
           <TableBody>
             {list.items.map((u) => (
               <TableRow key={u.id}>
-                <TableCell sx={{ fontFamily: monoFont }}>{u.registration}</TableCell>
-                <TableCell>{u.name}</TableCell>
+                <TableCell sx={{ fontVariantNumeric: "tabular-nums" }}>{u.registration}</TableCell>
+                <TableCell>
+                  <TextLink href={`/users/${u.id}`}>{u.name}</TextLink>
+                </TableCell>
                 <TableCell>{u.email}</TableCell>
                 <TableCell>{u.department}</TableCell>
                 <TableCell align="right">

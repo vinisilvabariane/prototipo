@@ -1,7 +1,13 @@
 import http from "node:http";
+import { createInstructionMock } from "./mock-instructions.mjs";
+import { createProductionMock } from "./mock-production.mjs";
+import { createSupplierMock } from "./mock-suppliers.mjs";
+import { createOrgChartMock } from "./mock-org-chart.mjs";
+import { createWorkflowMock } from "./mock-workflows.mjs";
 
 const PORT = Number(process.env.PORT ?? 5156);
 const PASSWORD = "meone";
+const TOKEN_TTL_SECONDS = Number(process.env.TOKEN_TTL ?? 900);
 
 const db = {
   departments: [
@@ -14,11 +20,17 @@ const db = {
     { id: 2, name: "operador", description: "Apontamento de produção" },
   ],
   users: [
-    { id: 1, registration: 1001, name: "Ana Souza", email: "ana@grupomultilaser.com.br", department: "ti" },
+    { id: 1, registration: 1001, name: "Ana Souza", email: "ana@exemplo.com", department: "ti" },
     { id: 2, registration: 1002, name: "Bruno Lima", email: null, department: "rh" },
-    { id: 3, registration: 1003, name: "Carla Dias", email: "carla@grupomultilaser.com.br", department: "qualidade" },
+    { id: 3, registration: 1003, name: "Carla Dias", email: "carla@exemplo.com", department: "qualidade" },
   ],
 };
+
+const handleWorkflows = createWorkflowMock(db.users);
+const handleOrgChart = createOrgChartMock(db.users, db.departments);
+const handleInstructions = createInstructionMock(db.users);
+const handleSuppliers = createSupplierMock(db.users, db.departments);
+const handleProduction = createProductionMock(db.users);
 
 let nextId = 100;
 let mode = "ok";
@@ -36,16 +48,49 @@ const send = (res, status, body) => {
 
 const fail = (res, status, error, details) => send(res, status, { error, details });
 
+const refreshTokens = new Map();
+let refreshCounter = 0;
+
 function makeToken(registration) {
+  const user = db.users.find((candidate) => candidate.registration === Number(registration)) ?? db.users[0];
   const payload = {
-    sub: "1",
-    name: "USUARIO DE TESTE",
+    sub: String(user.id),
+    name: user.name,
     registration: String(registration),
-    department: "ti",
+    department: user.department,
     roles: ["master"],
     applications: [],
+    exp: Math.floor(Date.now() / 1000) + TOKEN_TTL_SECONDS,
   };
   return `mock.${Buffer.from(JSON.stringify(payload)).toString("base64url")}.sig`;
+}
+
+function issueSession(registration) {
+  const refreshToken = `refresh-${++refreshCounter}`;
+  refreshTokens.set(refreshToken, registration);
+  return {
+    token: makeToken(registration),
+    refreshToken,
+    refreshExpires: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
+  };
+}
+
+function actorFrom(header) {
+  try {
+    return Number(JSON.parse(Buffer.from(header.split(".")[1], "base64url").toString("utf8")).sub);
+  } catch {
+    return 0;
+  }
+}
+
+function tokenIsValid(header) {
+  if (!header?.startsWith("Bearer mock.")) return false;
+  try {
+    const payload = JSON.parse(Buffer.from(header.split(".")[1], "base64url").toString("utf8"));
+    return typeof payload.exp !== "number" || payload.exp * 1000 > Date.now();
+  } catch {
+    return false;
+  }
 }
 
 const failureModes = {
@@ -67,16 +112,22 @@ const failureModes = {
 http
   .createServer(async (req, res) => {
     const url = new URL(req.url, "http://localhost");
-    const [, , resource, segment] = url.pathname.split("/").filter(Boolean);
+    const segments = url.pathname.split("/").filter(Boolean);
+    const [, , resource, segment, third] = segments;
+    const contentType = req.headers["content-type"] ?? "";
 
     let body = {};
+    let raw = Buffer.alloc(0);
     if (req.method === "POST" || req.method === "PUT") {
       const chunks = [];
       for await (const chunk of req) chunks.push(chunk);
-      try {
-        body = JSON.parse(Buffer.concat(chunks).toString() || "{}");
-      } catch {
-        body = {};
+      raw = Buffer.concat(chunks);
+      if (!contentType.startsWith("multipart/")) {
+        try {
+          body = JSON.parse(raw.toString() || "{}");
+        } catch {
+          body = {};
+        }
       }
     }
 
@@ -89,19 +140,48 @@ http
 
     if (resource === "auth" && req.method === "POST" && !segment) {
       return body.password === PASSWORD
-        ? send(res, 200, {
-            token: makeToken(body.registration),
-            refreshToken: "refresh",
-            refreshExpires: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
-          })
+        ? send(res, 200, issueSession(body.registration))
         : fail(res, 401, "Não foi possível autenticar", "Matrícula ou senha inválida.");
+    }
+
+    if (resource === "auth" && segment === "refresh" && req.method === "POST") {
+      const registration = refreshTokens.get(body.refreshToken);
+      if (registration === undefined) {
+        return fail(res, 400, "Não foi possível renovar a sessão", "Refresh token inválido ou expirado.");
+      }
+      refreshTokens.delete(body.refreshToken);
+      return send(res, 200, issueSession(registration));
     }
 
     if (mode !== "ok" && failureModes[mode]) return failureModes[mode](res);
 
     const anonymousRead = resource === "departments" && req.method === "GET";
-    if (!anonymousRead && !req.headers.authorization?.startsWith("Bearer mock.")) {
-      return fail(res, 401, "Não autenticado", "Token ausente ou inválido.");
+    if (!anonymousRead && !tokenIsValid(req.headers.authorization)) {
+      return fail(res, 401, "Não autenticado", "Token ausente, inválido ou expirado.");
+    }
+
+    if (resource === "users" && segment === "roles" && req.method === "GET") {
+      return send(res, 200, db.roles.filter((role) => role.name === (Number(third) === 1 ? "master" : "operador")));
+    }
+
+    if (resource === "workflows") {
+      return handleWorkflows({ req, res, url, segments, actor: actorFrom(req.headers.authorization), json: body, raw, contentType, send, fail });
+    }
+
+    if (resource === "production") {
+      return handleProduction({ req, res, url, segments, actor: actorFrom(req.headers.authorization), json: body, send, fail });
+    }
+
+    if (resource === "suppliers") {
+      return handleSuppliers({ req, res, url, segments, actor: actorFrom(req.headers.authorization), json: body, raw, contentType, send, fail });
+    }
+
+    if (resource === "work-instructions") {
+      return handleInstructions({ req, res, url, segments, actor: actorFrom(req.headers.authorization), raw, contentType, send, fail });
+    }
+
+    if (resource === "org-chart") {
+      return handleOrgChart({ req, res, url, segments, actor: actorFrom(req.headers.authorization), json: body, send, fail });
     }
 
     const list = db[resource];
@@ -130,6 +210,8 @@ http
 
     const item = list.find((entry) => String(entry.id) === segment);
     if (!item) return fail(res, 404, "Não encontrado", "Registro inexistente.");
+
+    if (req.method === "GET") return send(res, 200, item);
 
     if (req.method === "PUT") {
       const error = rules[resource](body);

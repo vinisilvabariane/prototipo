@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Card from "@mui/material/Card";
 import Stack from "@mui/material/Stack";
 import Table from "@mui/material/Table";
@@ -12,6 +13,11 @@ import PageError from "@/components/ui/PageError";
 import { createDepartment, deleteDepartment, updateDepartment } from "@/features/departments/actions/departmentActions";
 import DepartmentFields from "@/features/departments/components/DepartmentFields";
 import { departmentService } from "@/features/departments/services/DepartmentService";
+
+export const metadata: Metadata = {
+  title: "Departamentos",
+  description: "Departamentos cadastrados no sistema.",
+};
 
 export default async function DepartmentsPage() {
   const result = await departmentService.all();

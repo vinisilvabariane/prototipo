@@ -1,12 +1,10 @@
 import "server-only";
 import { cookies } from "next/headers";
 import type { SessionUser } from "@/features/auth/types";
-
-const TOKEN = "token";
-const REFRESH_TOKEN = "refreshToken";
+import { REFRESH_COOKIE, TOKEN_COOKIE, sessionCookies, type AuthTokens } from "@/lib/auth/cookies";
 
 export async function getToken() {
-  return (await cookies()).get(TOKEN)?.value;
+  return (await cookies()).get(TOKEN_COOKIE)?.value;
 }
 
 function toList(value: unknown): string[] {
@@ -20,7 +18,9 @@ export async function readSessionUser(): Promise<SessionUser | null> {
 
   try {
     const payload = JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString("utf8"));
+    const id = Number(payload.sub);
     return {
+      id: Number.isInteger(id) && id > 0 ? id : null,
       name: String(payload.name ?? ""),
       registration: String(payload.registration ?? ""),
       department: String(payload.department ?? ""),
@@ -31,20 +31,13 @@ export async function readSessionUser(): Promise<SessionUser | null> {
   }
 }
 
-export async function setSession(auth: { token: string; refreshToken: string; refreshExpires: string }) {
+export async function setSession(auth: AuthTokens) {
   const jar = await cookies();
-  const base = {
-    httpOnly: true,
-    sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-  };
-  jar.set(TOKEN, auth.token, base);
-  jar.set(REFRESH_TOKEN, auth.refreshToken, { ...base, expires: new Date(auth.refreshExpires) });
+  for (const cookie of sessionCookies(auth)) jar.set(cookie.name, cookie.value, cookie.options);
 }
 
 export async function clearSession() {
   const jar = await cookies();
-  jar.delete(TOKEN);
-  jar.delete(REFRESH_TOKEN);
+  jar.delete(TOKEN_COOKIE);
+  jar.delete(REFRESH_COOKIE);
 }

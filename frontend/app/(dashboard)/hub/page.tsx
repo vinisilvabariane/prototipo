@@ -1,8 +1,14 @@
+import type { Metadata } from "next";
 import { departmentService } from "@/features/departments/services/DepartmentService";
 import HubBoard from "@/features/hub/components/HubBoard";
 import { roleService } from "@/features/roles/services/RoleService";
 import { userService } from "@/features/users/services/UserService";
 import { all } from "@/lib/result";
+
+export const metadata: Metadata = {
+  title: "Módulos",
+  description: "Todos os módulos do MeOne e as funções de cada um.",
+};
 
 export default async function HubPage() {
   const [users, roles, departments] = await Promise.all([
