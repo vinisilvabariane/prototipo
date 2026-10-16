@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using MeOne.API.Auth;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace MeOne.Tests.API;
 
@@ -13,7 +14,9 @@ public sealed class HttpContextCurrentActorTests
             User = new ClaimsPrincipal(new ClaimsIdentity(claims, "Test")),
         };
 
-        return new HttpContextCurrentActor(new HttpContextAccessor { HttpContext = context });
+        return new HttpContextCurrentActor(
+            new HttpContextAccessor { HttpContext = context },
+            new AccessProfileCache(new MemoryCache(new MemoryCacheOptions()), null!));
     }
 
     [Fact]
@@ -69,16 +72,9 @@ public sealed class HttpContextCurrentActorTests
     {
         Assert.Null(ActorWith(new Claim("sub", "abc")).UserId);
 
-        var anonymous = new HttpContextCurrentActor(new HttpContextAccessor { HttpContext = new DefaultHttpContext() });
+        var anonymous = new HttpContextCurrentActor(
+            new HttpContextAccessor { HttpContext = new DefaultHttpContext() },
+            new AccessProfileCache(new MemoryCache(new MemoryCacheOptions()), null!));
         Assert.Null(anonymous.UserId);
-    }
-
-    [Fact]
-    public void IsInRole_UsesRoleClaims()
-    {
-        var actor = ActorWith(new Claim(ClaimTypes.Role, "master"));
-
-        Assert.True(actor.IsInRole("master"));
-        Assert.False(actor.IsInRole("operator"));
     }
 }

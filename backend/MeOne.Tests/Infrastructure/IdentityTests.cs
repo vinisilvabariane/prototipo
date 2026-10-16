@@ -54,7 +54,7 @@ public sealed class IdentityTests
             var random = password[TemporaryPasswordPolicy.Prefix.Length..];
 
             Assert.StartsWith(TemporaryPasswordPolicy.Prefix, password);
-            Assert.Equal(6, random.Length);
+            Assert.Equal(TemporaryPasswordPolicy.RandomLength, random.Length);
             Assert.Contains(random, char.IsUpper);
             Assert.Contains(random, char.IsLower);
             Assert.Contains(random, char.IsDigit);
@@ -92,7 +92,7 @@ public sealed class IdentityTests
             Options.Create(new EmailOptions()),
             NullLogger<SmtpPasswordResetNotifier>.Instance);
 
-        var sent = await notifier.NotifyAsync(f.AddUser(12345), "Multi123", CancellationToken.None);
+        var sent = await notifier.SendResetCodeAsync(f.AddUser(12345), "ABCD2345", DateTime.UtcNow.AddMinutes(15), CancellationToken.None);
 
         Assert.False(sent);
     }

@@ -20,4 +20,8 @@ public sealed class RefreshTokenRepository(MeOneDbContext context)
     public Task<int> RevokeAllForUserAsync(ulong userId, CancellationToken cancellationToken) =>
         DbSet.Where(token => token.UserId == userId && !token.Revoked)
             .ExecuteUpdateAsync(setters => setters.SetProperty(token => token.Revoked, true), cancellationToken);
+
+    public async Task<bool> TryRevokeAsync(ulong tokenId, CancellationToken cancellationToken) =>
+        await DbSet.Where(token => token.Id == tokenId && !token.Revoked)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(token => token.Revoked, true), cancellationToken) == 1;
 }

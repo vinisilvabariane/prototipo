@@ -9,6 +9,7 @@ using MeOne.Application.Interfaces.Auth;
 using MeOne.Application.Interfaces.Departments;
 using MeOne.Application.Interfaces.Roles;
 using MeOne.Application.Interfaces.Users;
+using MeOne.Application.Interfaces.Workflows;
 
 namespace MeOne.Tests.Infrastructure;
 
@@ -31,6 +32,9 @@ public sealed class DependencyInjectionConventionTests
 
         services.AddLogging();
         services.AddHttpContextAccessor();
+        services.AddMemoryCache();
+        services.AddSingleton<AccessProfileCache>();
+        services.AddSingleton<IAccessProfileCache>(provider => provider.GetRequiredService<AccessProfileCache>());
         services.AddScoped<ICurrentActor, HttpContextCurrentActor>();
 
         services.AddSingleton(new JwtOptions { Key = new string('k', JwtOptions.MinKeyBytes), Audiences = ["meone"] });
@@ -71,9 +75,12 @@ public sealed class DependencyInjectionConventionTests
         Assert.NotNull(scope.ServiceProvider.GetService<ILogoutUseCase>());
         Assert.NotNull(scope.ServiceProvider.GetService<IValidateCredentialsUseCase>());
         Assert.NotNull(scope.ServiceProvider.GetService<ICreateUserUseCase>());
-        Assert.NotNull(scope.ServiceProvider.GetService<IResetPasswordUseCase>());
+        Assert.NotNull(scope.ServiceProvider.GetService<IConfirmPasswordResetUseCase>());
         Assert.NotNull(scope.ServiceProvider.GetService<IAssignRoleUseCase>());
         Assert.NotNull(scope.ServiceProvider.GetService<IDeleteDepartmentUseCase>());
+        Assert.NotNull(scope.ServiceProvider.GetService<ICreateWorkflowUseCase>());
+        Assert.NotNull(scope.ServiceProvider.GetService<IWorkflowRepository>());
+        Assert.NotNull(scope.ServiceProvider.GetService<IWorkflowFileStorage>());
         Assert.NotNull(scope.ServiceProvider.GetService<IUserRepository>());
         Assert.NotNull(scope.ServiceProvider.GetService<IRefreshTokenRepository>());
     }

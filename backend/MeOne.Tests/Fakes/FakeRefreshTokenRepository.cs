@@ -17,4 +17,11 @@ public sealed class FakeRefreshTokenRepository : InMemoryRepository<RefreshToken
 
         return Task.FromResult(active.Count);
     }
+
+    public Task<bool> TryRevokeAsync(ulong tokenId, CancellationToken cancellationToken)
+    {
+        var token = Items.FirstOrDefault(item => item.Id == tokenId && !item.Revoked);
+        token?.Revoke();
+        return Task.FromResult(token is not null);
+    }
 }

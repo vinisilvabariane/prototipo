@@ -5,5 +5,5 @@ namespace MeOne.Application.Interfaces.Users;
 
 public interface IListUserRolesUseCase
 {
-    Task<Result<IReadOnlyList<RoleResponse>>> ExecuteAsync(ulong userId, CancellationToken cancellationToken);
+    Task<Result<IReadOnlyList<RoleAssignmentResponse>>> ExecuteAsync(ulong userId, CancellationToken cancellationToken);
 }

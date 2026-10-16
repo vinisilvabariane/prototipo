@@ -9,17 +9,43 @@ using MeOne.Domain.Rules;
 
 namespace MeOne.Application.UseCases.Auth;
 
-public sealed class LogoutUseCase(IRefreshTokenRepository tokens, ICurrentActor currentActor) : ILogoutUseCase
+public sealed class LogoutUseCase(
+    IRefreshTokenRepository tokens,
+    IUserRepository users,
+    IAccessProfileCache accessProfiles,
+    ICurrentActor currentActor) : ILogoutUseCase
 {
     public async Task<Result> ExecuteAsync(LogoutRequest request, CancellationToken cancellationToken)
     {
-        if (currentActor.UserId is not { } actorId)
-            return Result.Fail(new CredentialRejectedError(AuthErrors.SessionWithoutUser));
+        var actor = await AccessGuard.ActorAsync(currentActor, cancellationToken);
+        if (actor.IsFailed)
+            return actor.ToResult();
 
-        if (request.UserId != actorId && !currentActor.IsInRole(AccessRoles.Master))
-            return Result.Fail(new ForbiddenError(AuthErrors.LogoutOtherUserForbidden));
+        var user = await users.GetWithAccessAsync(request.UserId, cancellationToken);
+
+        if (request.UserId != actor.Value.UserId)
+        {
+            if (!actor.Value.HasGlobal(Permissions.UsersManage))
+                return Result.Fail(new ForbiddenError(AuthErrors.LogoutOtherUserForbidden));
+
+            if (user is null)
+                return Result.Fail(new NotFoundError(UserErrors.NotFound));
+
+            var dominance = AccessGuard.EnsureDominates(actor.Value, user);
+            if (dominance.IsFailed)
+                return dominance;
+        }
 
         await tokens.RevokeAllForUserAsync(request.UserId, cancellationToken);
+
+        if (user is not null)
+        {
+            user.RotateSecurityStamp();
+            users.Update(user);
+            await users.SaveChangesAsync(cancellationToken);
+        }
+
+        accessProfiles.Invalidate(request.UserId);
 
         return Result.Ok();
     }

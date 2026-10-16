@@ -14,7 +14,7 @@ public sealed class SmtpPasswordResetNotifier(
     IOptions<EmailOptions> options,
     ILogger<SmtpPasswordResetNotifier> logger) : IPasswordResetNotifier
 {
-    private const string Subject = "Senha resetada";
+    private const string Subject = "Código para redefinir sua senha";
     private const string LogoContentId = "meone-logo";
     private const string TemplateResource = "MeOne.Infrastructure.Email.Templates.ResetPassword.html";
     private const string LogoResource = "MeOne.Infrastructure.Email.Templates.logo-transparent.svg";
@@ -25,7 +25,11 @@ public sealed class SmtpPasswordResetNotifier(
 
     private readonly EmailOptions _options = options.Value;
 
-    public async Task<bool> NotifyAsync(User user, string temporaryPassword, CancellationToken cancellationToken)
+    public async Task<bool> SendResetCodeAsync(
+        User user,
+        string code,
+        DateTime expiresAtUtc,
+        CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(user.Email))
             return false;
@@ -39,7 +43,7 @@ public sealed class SmtpPasswordResetNotifier(
 
         try
         {
-            using var message = BuildMessage(user, temporaryPassword);
+            using var message = BuildMessage(user, code, expiresAtUtc);
             using var smtp = new SmtpClient { Timeout = _options.TimeoutSeconds * 1000 };
 
             await smtp.ConnectAsync(_options.SmtpServer, _options.Port, SecureSocketOptions.Auto, cancellationToken);
@@ -57,14 +61,15 @@ public sealed class SmtpPasswordResetNotifier(
         }
     }
 
-    private MimeMessage BuildMessage(User user, string temporaryPassword)
+    private MimeMessage BuildMessage(User user, string code, DateTime expiresAtUtc)
     {
         var html = Render(Template.Value, new Dictionary<string, string>
         {
             ["logoUrl"] = $"cid:{LogoContentId}",
-            ["newPassword"] = temporaryPassword,
+            ["resetCode"] = code,
+            ["expiresAt"] = ToLocal(expiresAtUtc).ToString("dd/MM/yyyy HH:mm", PtBr),
             ["registration"] = user.Registration.ToString(CultureInfo.InvariantCulture),
-            ["resetAt"] = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss", PtBr),
+            ["requestedAt"] = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss", PtBr),
             ["userName"] = user.Name,
         });
 
@@ -87,6 +92,9 @@ public sealed class SmtpPasswordResetNotifier(
             $"{{{{{pair.Key}}}}}",
             pair.Key == "logoUrl" ? pair.Value : WebUtility.HtmlEncode(pair.Value),
             StringComparison.OrdinalIgnoreCase));
+
+    private static DateTime ToLocal(DateTime utc) =>
+        DateTime.SpecifyKind(utc, DateTimeKind.Utc).ToLocalTime();
 
     private static string ReadResourceText(string name)
     {

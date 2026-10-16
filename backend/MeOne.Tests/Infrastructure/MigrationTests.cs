@@ -28,7 +28,7 @@ public sealed class MigrationTests
 
         var sql = context.GetService<IMigrator>().GenerateScript();
 
-        foreach (var table in new[] { "users", "roles", "user_roles", "departments", "applications", "user_applications", "refresh_tokens" })
+        foreach (var table in new[] { "users", "roles", "user_roles", "departments", "applications", "user_applications", "refresh_tokens", "permissions", "role_permissions", "scopes", "password_reset_tokens" })
             Assert.Contains($"CREATE TABLE `{table}`", sql);
 
         Assert.Contains($"VALUES ({RoleConfiguration.MasterRoleId}, 'Administração', 'master')", sql);

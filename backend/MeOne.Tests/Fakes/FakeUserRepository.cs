@@ -31,6 +31,20 @@ public sealed class FakeUserRepository : InMemoryRepository<User, ulong>, IUserR
     public Task<IReadOnlyList<User>> SearchAsync(string? search, int skip, int take, CancellationToken cancellationToken) =>
         Task.FromResult<IReadOnlyList<User>>([.. Matching(search).OrderBy(user => user.Id).Skip(skip).Take(take)]);
 
+    public Task<int> CountActiveAdministratorsAsync(CancellationToken cancellationToken) =>
+        Task.FromResult(Active.Count(user => user.IsAdministrator));
+
+    public Task<IReadOnlyList<User>> ListActiveAsync(CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<User>>([.. Active.OrderBy(user => user.Name)]);
+
+    public Task<IReadOnlyList<User>> GetActiveByIdsAsync(IReadOnlyCollection<ulong> ids, CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<User>>([.. Active.Where(user => ids.Contains(user.Id))]);
+
+    public Task<IReadOnlyList<User>> GetByIdsIncludingInactiveAsync(
+        IReadOnlyCollection<ulong> ids,
+        CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<User>>([.. Items.Where(user => ids.Contains(user.Id))]);
+
     private IEnumerable<User> Matching(string? search)
     {
         if (string.IsNullOrWhiteSpace(search))

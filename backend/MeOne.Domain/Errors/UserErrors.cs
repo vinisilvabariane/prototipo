@@ -24,10 +24,9 @@ public static class UserErrors
     public const string DepartmentInvalid = "Departamento inválido.";
     public const string RegistrationTaken = "Já existe um usuário (ativo ou desativado) com essa matrícula.";
     public const string EmailTaken = "Já existe um usuário com esse e-mail.";
-    public const string NoEmailForReset =
-        "Usuário sem e-mail cadastrado. Peça a um master para redefinir a senha.";
-    public const string ResetEmailFailed =
-        "Não foi possível enviar o e-mail com a nova senha; a senha não foi alterada. Tente de novo mais tarde.";
+    public const string TargetHasMorePrivileges =
+        "Você não pode alterar um usuário que tem permissões que você não tem.";
+    public const string LastAdministrator = "Não é possível remover ou desativar o último administrador.";
     public const string CannotDeleteSelf = "Você não pode desativar o seu próprio usuário.";
     public const string UserIdRequired = "Informe o usuário.";
     public const string NothingPersisted = "Nenhuma alteração foi persistida no banco de dados.";

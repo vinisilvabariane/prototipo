@@ -10,5 +10,6 @@ public sealed class AssignRoleRequestValidator : AbstractValidator<AssignRoleReq
     {
         RuleFor(x => x.UserId).GreaterThan(0UL).WithMessage(UserErrors.UserIdRequired);
         RuleFor(x => x.RoleId).GreaterThan(0UL).WithMessage(RoleErrors.RoleIdRequired);
+        RuleFor(x => x.ScopeId).GreaterThan(0UL).When(x => x.ScopeId is not null).WithMessage(ScopeErrors.NotFound);
     }
 }

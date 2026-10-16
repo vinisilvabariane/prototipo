@@ -8,7 +8,7 @@ namespace MeOne.Infrastructure.Mappings;
 
 public sealed class RoleConfiguration : IEntityTypeConfiguration<Role>
 {
-    public const ulong MasterRoleId = 1;
+    public const ulong MasterRoleId = RoleCatalog.AdministratorId;
 
     public void Configure(EntityTypeBuilder<Role> builder)
     {
@@ -29,6 +29,19 @@ public sealed class RoleConfiguration : IEntityTypeConfiguration<Role>
             .HasMaxLength(RoleErrors.MaxDescriptionLength)
             .IsRequired();
 
-        builder.HasData(new { Id = MasterRoleId, Name = AccessRoles.Master, Description = "Administração" });
+        builder.HasIndex(x => x.Name).IsUnique();
+
+        builder.HasMany(x => x.Permissions)
+            .WithOne()
+            .HasForeignKey(x => x.RoleId)
+            .HasConstraintName("role_permissions_fk_role")
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Navigation(x => x.Permissions).UsePropertyAccessMode(PropertyAccessMode.Field);
+
+        builder.Ignore(x => x.IsAdministrator);
+        builder.Ignore(x => x.PermissionCodes);
+
+        builder.HasData(RoleCatalog.All.Select(role => new { role.Id, role.Name, role.Description }));
     }
 }

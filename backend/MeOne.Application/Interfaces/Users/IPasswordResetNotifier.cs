@@ -4,5 +4,5 @@ namespace MeOne.Application.Interfaces.Users;
 
 public interface IPasswordResetNotifier
 {
-    Task<bool> NotifyAsync(User user, string temporaryPassword, CancellationToken cancellationToken);
+    Task<bool> SendResetCodeAsync(User user, string code, DateTime expiresAtUtc, CancellationToken cancellationToken);
 }

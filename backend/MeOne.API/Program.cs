@@ -9,7 +9,8 @@ using FluentValidation;
 using MeOne.API.Validation;
 using MeOne.Application.Validators.Auth;
 using MeOne.Infrastructure;
-using Microsoft.AspNetCore.Authentication;
+using MeOne.API.Middlewares;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
@@ -20,6 +21,8 @@ using MeOne.Application.Interfaces.Auth;
 const string CorsPolicy = "MeOneClients";
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);
 
 builder.Services.AddApplicationUseCases();
 builder.Services.AddInfrastructureRepositories();
@@ -44,11 +47,9 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
 {
     options.InvalidModelStateResponseFactory = context =>
     {
-        var errors = context.ModelState
-            .Values
-            .SelectMany(entry => entry.Errors)
-            .Select(error => error.ErrorMessage);
-        return new BadRequestObjectResult(ErrorResponse.From(FluentValidationFilter.Title, errors));
+        return new BadRequestObjectResult(ErrorResponse.From(
+            FluentValidationFilter.Title,
+            "Corpo da requisição inválido ou mal formatado."));
     };
 });
 
@@ -66,6 +67,9 @@ builder.Services.AddOutputCache(options =>
     options.AddPolicy(HealthEndpoints.CachePolicy, policy => policy.Expire(TimeSpan.FromSeconds(5))));
 
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddMemoryCache();
+builder.Services.AddSingleton<AccessProfileCache>();
+builder.Services.AddSingleton<IAccessProfileCache>(provider => provider.GetRequiredService<AccessProfileCache>());
 builder.Services.AddScoped<ICurrentActor, HttpContextCurrentActor>();
 
 var jwt = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
@@ -90,8 +94,14 @@ builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        options.MapInboundClaims = false;
+
         options.TokenValidationParameters = new TokenValidationParameters
         {
+            ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
+            ClockSkew = TimeSpan.FromSeconds(30),
+            NameClaimType = TokenClaims.Name,
+            RoleClaimType = TokenClaims.Roles,
             ValidateIssuer = true,
             ValidIssuer = jwt.Issuer,
             ValidateAudience = true,
@@ -103,6 +113,23 @@ builder.Services
 
         options.Events = new JwtBearerEvents
         {
+            OnTokenValidated = async context =>
+            {
+                var stamp = context.Principal?.FindFirst(TokenClaims.SecurityStamp)?.Value;
+
+                if (TokenClaims.UserId(context.Principal) is not { } userId || stamp is null)
+                {
+                    context.Fail("Token sem identificação de sessão.");
+                    return;
+                }
+
+                var profile = await context.HttpContext.RequestServices
+                    .GetRequiredService<AccessProfileCache>()
+                    .GetAsync(userId, context.HttpContext.RequestAborted);
+
+                if (profile is not { Active: true } || profile.SecurityStamp != stamp)
+                    context.Fail("Sessão revogada.");
+            },
             OnChallenge = async context =>
             {
                 context.HandleResponse();
@@ -130,9 +157,9 @@ builder.Services
         };
     });
 
-builder.Services.AddAuthorization(options =>
-    options.AddPolicy(AuthPolicies.MasterOnly, policy => policy.RequireRole(AuthPolicies.MasterRole)));
-builder.Services.AddSingleton<IClaimsTransformation, RolesClaimsTransformation>();
+builder.Services.AddAuthorization();
+builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
+builder.Services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
 
 var anonymousPermitPerMinute = builder.Configuration.GetValue("RateLimiting:AnonymousCredentialsPerMinute", 30);
 
@@ -202,6 +229,8 @@ else
     app.UseHsts();
     app.UseHttpsRedirection();
 }
+
+app.UseSecurityHeaders();
 
 app.UseStaticFiles();
 

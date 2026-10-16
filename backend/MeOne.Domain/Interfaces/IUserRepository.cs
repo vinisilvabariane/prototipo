@@ -17,4 +17,14 @@ public interface IUserRepository : IRepository<User, ulong>
     Task<int> CountAsync(string? search, CancellationToken cancellationToken);
 
     Task<IReadOnlyList<User>> SearchAsync(string? search, int skip, int take, CancellationToken cancellationToken);
+
+    Task<int> CountActiveAdministratorsAsync(CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<User>> ListActiveAsync(CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<User>> GetActiveByIdsAsync(IReadOnlyCollection<ulong> ids, CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<User>> GetByIdsIncludingInactiveAsync(
+        IReadOnlyCollection<ulong> ids,
+        CancellationToken cancellationToken);
 }

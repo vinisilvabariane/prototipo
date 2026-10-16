@@ -37,15 +37,24 @@ public sealed class FakeAccessTokenIssuer : IAccessTokenIssuer
     }
 }
 
-public sealed class FakePasswordResetNotifier(bool succeeds = true) : IPasswordResetNotifier
+public sealed class FakePasswordResetNotifier : IPasswordResetNotifier
 {
-    public List<(User User, string Password)> Sent { get; } = [];
+    public List<(User User, string Code)> Sent { get; } = [];
 
-    public Task<bool> NotifyAsync(User user, string temporaryPassword, CancellationToken cancellationToken)
+    public Task<bool> SendResetCodeAsync(User user, string code, DateTime expiresAtUtc, CancellationToken cancellationToken)
     {
-        if (succeeds)
-            Sent.Add((user, temporaryPassword));
-
-        return Task.FromResult(succeeds);
+        Sent.Add((user, code));
+        return Task.FromResult(true);
     }
+}
+
+public sealed class FakeAccessProfileCache : IAccessProfileCache
+{
+    public List<ulong> Invalidated { get; } = [];
+
+    public int InvalidatedAll { get; private set; }
+
+    public void Invalidate(ulong userId) => Invalidated.Add(userId);
+
+    public void InvalidateAll() => InvalidatedAll++;
 }

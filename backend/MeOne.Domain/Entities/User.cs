@@ -1,3 +1,5 @@
+using MeOne.Domain.Rules;
+
 namespace MeOne.Domain.Entities;
 
 public sealed class User : Entity<ulong>
@@ -26,17 +28,25 @@ public sealed class User : Entity<ulong>
 
     public Department? Department { get; private set; }
 
+    public string SecurityStamp { get; private set; } = NewSecurityStamp();
+
+    public int FailedLoginCount { get; private set; }
+
+    public DateTime? LockedUntil { get; private set; }
+
     public IReadOnlyCollection<UserRole> Roles => _roles;
 
     public IReadOnlyCollection<UserApplication> Applications => _applications;
 
     public IReadOnlyList<string> RoleNames =>
-        [.. _roles.Where(link => link.Role is not null).Select(link => link.Role!.Name)];
+        [.. _roles.Where(link => link.Role is not null).Select(link => link.Role!.Name).Distinct()];
 
     public IReadOnlyList<string> ApplicationNames =>
         [.. _applications
             .Where(link => link.Application is { Active: true })
             .Select(link => link.Application!.Name)];
+
+    public bool IsAdministrator => _roles.Any(link => link.Role is { IsAdministrator: true } && link.ScopeId is null);
 
     public static User Create(
         uint registration,
@@ -64,25 +74,56 @@ public sealed class User : Entity<ulong>
     public void ChangePassword(string passwordHash, ulong modifiedBy)
     {
         PasswordHash = passwordHash;
+        FailedLoginCount = 0;
+        LockedUntil = null;
+        RotateSecurityStamp();
         Touch(modifiedBy);
     }
 
     public void Deactivate(ulong modifiedBy)
     {
         Active = false;
+        RotateSecurityStamp();
         Touch(modifiedBy);
     }
 
-    public bool HasRole(ulong roleId) => _roles.Any(link => link.RoleId == roleId);
+    public void RotateSecurityStamp() => SecurityStamp = NewSecurityStamp();
 
-    public bool HasRole(string roleName) => RoleNames.Contains(roleName, StringComparer.OrdinalIgnoreCase);
+    public bool IsLockedOut(DateTime nowUtc) => LockedUntil > nowUtc;
 
-    public void GrantRole(Role role) => _roles.Add(UserRole.Link(Id, role));
+    public void RegisterFailedLogin(DateTime nowUtc)
+    {
+        FailedLoginCount++;
 
-    public bool RevokeRole(ulong roleId) => _roles.RemoveAll(link => link.RoleId == roleId) > 0;
+        if (FailedLoginCount < LoginLockoutPolicy.MaxFailedAttempts)
+            return;
+
+        FailedLoginCount = 0;
+        LockedUntil = nowUtc.Add(LoginLockoutPolicy.LockoutDuration);
+    }
+
+    public bool RegisterSuccessfulLogin()
+    {
+        if (FailedLoginCount == 0 && LockedUntil is null)
+            return false;
+
+        FailedLoginCount = 0;
+        LockedUntil = null;
+        return true;
+    }
+
+    public bool HasRole(ulong roleId, ulong? scopeId) =>
+        _roles.Any(link => link.RoleId == roleId && link.ScopeId == scopeId);
+
+    public void GrantRole(Role role, Scope? scope) => _roles.Add(UserRole.Link(Id, role, scope));
+
+    public bool RevokeRole(ulong roleId, ulong? scopeId) =>
+        _roles.RemoveAll(link => link.RoleId == roleId && link.ScopeId == scopeId) > 0;
 
     public static string? NormalizeEmail(string? email) =>
         string.IsNullOrWhiteSpace(email) ? null : email.Trim().ToLowerInvariant();
+
+    private static string NewSecurityStamp() => Guid.NewGuid().ToString("N");
 
     private void Touch(ulong modifiedBy)
     {

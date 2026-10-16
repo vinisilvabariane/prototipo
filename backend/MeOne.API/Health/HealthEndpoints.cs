@@ -1,5 +1,7 @@
 using System.Reflection;
 using System.Text.Json;
+using MeOne.API.Auth;
+using MeOne.Domain.Rules;
 using MeOne.Infrastructure;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -48,7 +50,7 @@ public static class HealthEndpoints
             ResponseWriter = WriteDetailAsync,
             ResultStatusCodes = ResultStatusCodes
         })
-        .RequireAuthorization();
+        .RequireAuthorization(RequirePermissionAttribute.PolicyFor(Permissions.SystemHealth));
         return endpoints;
     }
 

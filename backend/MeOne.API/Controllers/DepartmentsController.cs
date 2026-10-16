@@ -3,6 +3,7 @@ using MeOne.API.Errors;
 using MeOne.Application.Communication.Departments.Requests;
 using MeOne.Application.Communication.Departments.Responses;
 using MeOne.Application.Interfaces.Departments;
+using MeOne.Domain.Rules;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -38,7 +39,7 @@ public class DepartmentsController(
     }
 
     [HttpPost]
-    [Authorize(Policy = AuthPolicies.MasterOnly)]
+    [RequirePermission(Permissions.DepartmentsManage)]
     [ProducesResponseType(typeof(DepartmentResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
@@ -54,7 +55,7 @@ public class DepartmentsController(
     }
 
     [HttpPut("{id:int}")]
-    [Authorize(Policy = AuthPolicies.MasterOnly)]
+    [RequirePermission(Permissions.DepartmentsManage)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
@@ -67,7 +68,7 @@ public class DepartmentsController(
     }
 
     [HttpDelete("{id:int}")]
-    [Authorize(Policy = AuthPolicies.MasterOnly)]
+    [RequirePermission(Permissions.DepartmentsManage)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]

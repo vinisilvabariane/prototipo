@@ -19,10 +19,27 @@ public sealed class LoginUseCase(
 {
     public async Task<Result<AuthResponse>> ExecuteAsync(LoginRequest request, CancellationToken cancellationToken)
     {
+        var now = DateTime.UtcNow;
         var user = await users.GetWithAccessByRegistrationAsync(request.Registration, cancellationToken);
+        var passwordMatches = passwordHasher.Verify(request.Password, user?.PasswordHash);
 
-        if (!passwordHasher.Verify(request.Password, user?.PasswordHash) || user is null)
+        if (user is null || user.IsLockedOut(now))
             return Result.Fail(new CredentialRejectedError(AuthErrors.InvalidCredentials));
+
+        if (!passwordMatches)
+        {
+            user.RegisterFailedLogin(now);
+            users.Update(user);
+            await users.SaveChangesAsync(cancellationToken);
+
+            return Result.Fail(new CredentialRejectedError(AuthErrors.InvalidCredentials));
+        }
+
+        if (user.RegisterSuccessfulLogin())
+        {
+            users.Update(user);
+            await users.SaveChangesAsync(cancellationToken);
+        }
 
         await tokens.RevokeAllForUserAsync(user.Id, cancellationToken);
 

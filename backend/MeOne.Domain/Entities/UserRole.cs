@@ -8,12 +8,18 @@ public sealed class UserRole : Entity<ulong>
 
     public ulong RoleId { get; private set; }
 
+    public ulong? ScopeId { get; private set; }
+
     public Role? Role { get; private set; }
 
-    internal static UserRole Link(ulong userId, Role role) => new()
+    public Scope? Scope { get; private set; }
+
+    internal static UserRole Link(ulong userId, Role role, Scope? scope) => new()
     {
         UserId = userId,
         RoleId = role.Id,
         Role = role,
+        ScopeId = scope?.Id,
+        Scope = scope,
     };
 }

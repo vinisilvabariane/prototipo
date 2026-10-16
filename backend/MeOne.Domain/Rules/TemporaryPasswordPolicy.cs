@@ -6,10 +6,11 @@ public static class TemporaryPasswordPolicy
 {
     public const string Prefix = "Multi";
 
+    public const int RandomLength = 12;
+
     private const string Upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
     private const string Lower = "abcdefghijkmnopqrstuvwxyz";
     private const string Digits = "23456789";
-    private const int RandomLength = 6;
 
     public static string Generate()
     {
@@ -23,11 +24,7 @@ public static class TemporaryPasswordPolicy
         for (var i = 3; i < chars.Length; i++)
             chars[i] = all[RandomNumberGenerator.GetInt32(all.Length)];
 
-        for (var i = chars.Length - 1; i > 0; i--)
-        {
-            var j = RandomNumberGenerator.GetInt32(i + 1);
-            (chars[i], chars[j]) = (chars[j], chars[i]);
-        }
+        RandomNumberGenerator.Shuffle(chars.AsSpan());
 
         return Prefix + new string(chars);
     }

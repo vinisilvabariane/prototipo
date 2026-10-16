@@ -11,7 +11,7 @@ public sealed class GetRoleUseCase(IRoleRepository roles) : IGetRoleUseCase
 {
     public async Task<Result<RoleResponse>> ExecuteAsync(ulong id, CancellationToken cancellationToken)
     {
-        var role = await roles.GetByIdAsync(id, cancellationToken);
+        var role = await roles.GetWithPermissionsAsync(id, cancellationToken);
 
         return role is null
             ? Result.Fail(new NotFoundError(RoleErrors.NotFound))

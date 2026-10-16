@@ -1,21 +1,30 @@
+using System.Globalization;
 using MeOne.Application.Interfaces;
+using MeOne.Domain.Entities;
+using MeOne.Domain.Rules;
 
 namespace MeOne.Tests.Fakes;
 
-public sealed class FakeCurrentActor(
-    string? registration = "jdoe",
-    ulong? userId = null,
-    params string[] roles) : ICurrentActor
+public sealed class FakeCurrentActor(string? registration, ulong? userId, Func<AccessProfile?> profile) : ICurrentActor
 {
     public string? Registration { get; } = registration;
 
     public ulong? UserId { get; } = userId;
 
-    public bool IsInRole(string role) => roles.Contains(role);
+    public Task<AccessProfile?> GetAccessProfileAsync(CancellationToken cancellationToken) =>
+        Task.FromResult(profile());
 
-    public static FakeCurrentActor Anonymous() => new(registration: null);
+    public static FakeCurrentActor Anonymous() => new(null, null, () => null);
 
-    public static FakeCurrentActor Master(ulong userId = 1) => new("master", userId, "master");
+    public static FakeCurrentActor For(User user) =>
+        new(user.Registration.ToString(CultureInfo.InvariantCulture), user.Id, () => AccessProfile.From(user));
 
-    public static FakeCurrentActor Common(ulong userId) => new(userId.ToString(), userId);
+    public static FakeCurrentActor Administrator(ulong userId = 999) =>
+        new(userId.ToString(CultureInfo.InvariantCulture), userId,
+            () => new AccessProfile(userId, active: true, "stamp", isAdministrator: true, []));
+
+    public static FakeCurrentActor WithPermissions(ulong userId, params string[] permissions) =>
+        new(userId.ToString(CultureInfo.InvariantCulture), userId,
+            () => new AccessProfile(userId, active: true, "stamp", isAdministrator: false,
+                permissions.Select(permission => new AccessGrant(permission, null))));
 }

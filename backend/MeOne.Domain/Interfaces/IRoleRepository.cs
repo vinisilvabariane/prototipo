@@ -4,6 +4,8 @@ namespace MeOne.Domain.Interfaces;
 
 public interface IRoleRepository : IRepository<Role, ulong>
 {
+    Task<Role?> GetWithPermissionsAsync(ulong id, CancellationToken cancellationToken);
+
     Task<bool> NameExistsAsync(string name, ulong? exceptRoleId, CancellationToken cancellationToken);
 
     Task<bool> InUseAsync(ulong roleId, CancellationToken cancellationToken);

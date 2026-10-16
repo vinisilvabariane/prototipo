@@ -1,3 +1,4 @@
+using MeOne.Application.Communication.Roles.Responses;
 using MeOne.Application.Communication.Users.Responses;
 using MeOne.Application.Interfaces;
 using MeOne.Domain.Entities;
@@ -16,6 +17,14 @@ internal static class UsersMapping
         user.Name,
         user.Email,
         user.Department?.Name ?? string.Empty);
+
+    public static RoleAssignmentResponse ToAssignment(UserRole link) => new(
+        link.RoleId,
+        link.Role?.Name ?? string.Empty,
+        link.Role?.Description ?? string.Empty,
+        link.ScopeId,
+        link.Scope?.Code,
+        link.Scope?.Name);
 
     public static async Task<string?> UniquenessViolationAsync(
         IUserRepository users,

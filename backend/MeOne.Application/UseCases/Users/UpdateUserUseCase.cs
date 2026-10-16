@@ -3,6 +3,7 @@ using MeOne.Application.Communication.Users.Requests;
 using MeOne.Application.Errors;
 using MeOne.Application.Interfaces;
 using MeOne.Application.Interfaces.Users;
+using MeOne.Application.UseCases.Auth;
 using MeOne.Domain.Entities;
 using MeOne.Domain.Errors;
 using MeOne.Domain.Interfaces;
@@ -16,9 +17,17 @@ public sealed class UpdateUserUseCase(
 {
     public async Task<Result> ExecuteAsync(ulong id, UpdateUserRequest request, CancellationToken cancellationToken)
     {
-        var user = await users.GetByIdAsync(id, cancellationToken);
+        var actor = await AccessGuard.ActorAsync(currentActor, cancellationToken);
+        if (actor.IsFailed)
+            return actor.ToResult();
+
+        var user = await users.GetWithAccessAsync(id, cancellationToken);
         if (user is null)
             return Result.Fail(new NotFoundError(UserErrors.NotFound));
+
+        var dominance = AccessGuard.EnsureDominates(actor.Value, user);
+        if (dominance.IsFailed)
+            return dominance;
 
         var department = await UsersMapping.FindDepartmentAsync(departments, request.Department, cancellationToken);
         if (department is null)

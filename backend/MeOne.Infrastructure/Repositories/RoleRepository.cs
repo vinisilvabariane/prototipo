@@ -14,6 +14,10 @@ public sealed class RoleRepository(MeOneDbContext context)
             DbSet.Update(entity);
     }
 
+    public Task<Role?> GetWithPermissionsAsync(ulong id, CancellationToken cancellationToken) =>
+        DbSet.Include(role => role.Permissions)
+            .FirstOrDefaultAsync(role => role.Id == id, cancellationToken);
+
     public Task<bool> NameExistsAsync(string name, ulong? exceptRoleId, CancellationToken cancellationToken)
     {
         var trimmed = name.Trim();
@@ -30,6 +34,7 @@ public sealed class RoleRepository(MeOneDbContext context)
 
     public async Task<IReadOnlyList<Role>> ListPageAsync(int skip, int take, CancellationToken cancellationToken) =>
         await DbSet.AsNoTracking()
+            .Include(role => role.Permissions)
             .OrderBy(role => role.Id)
             .Skip(skip)
             .Take(take)
@@ -37,6 +42,7 @@ public sealed class RoleRepository(MeOneDbContext context)
 
     public async Task<IReadOnlyList<Role>> ListOrderedAsync(CancellationToken cancellationToken) =>
         await DbSet.AsNoTracking()
+            .Include(role => role.Permissions)
             .OrderBy(role => role.Name)
             .ToListAsync(cancellationToken);
 }

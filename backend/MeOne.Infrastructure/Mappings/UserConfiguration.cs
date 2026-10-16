@@ -50,6 +50,18 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
             .HasColumnName("fk_department")
             .IsRequired();
 
+        builder.Property(x => x.SecurityStamp)
+            .HasColumnName("security_stamp")
+            .HasMaxLength(64)
+            .IsRequired();
+
+        builder.Property(x => x.FailedLoginCount)
+            .HasColumnName("failed_login_count")
+            .IsRequired();
+
+        builder.Property(x => x.LockedUntil)
+            .HasColumnName("locked_until");
+
         builder.HasIndex(x => x.Registration).IsUnique();
         builder.HasIndex(x => x.Email).IsUnique();
 
@@ -78,5 +90,6 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
 
         builder.Ignore(x => x.RoleNames);
         builder.Ignore(x => x.ApplicationNames);
+        builder.Ignore(x => x.IsAdministrator);
     }
 }

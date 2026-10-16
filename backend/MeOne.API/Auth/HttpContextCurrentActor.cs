@@ -1,26 +1,22 @@
-using System.Globalization;
 using System.Security.Claims;
 using MeOne.Application.Interfaces;
+using MeOne.Domain.Rules;
 
 namespace MeOne.API.Auth;
 
-public sealed class HttpContextCurrentActor : ICurrentActor
+public sealed class HttpContextCurrentActor(IHttpContextAccessor accessor, AccessProfileCache accessProfiles) : ICurrentActor
 {
-    private readonly IHttpContextAccessor _accessor;
-
-    public HttpContextCurrentActor(IHttpContextAccessor accessor) => _accessor = accessor;
-
     public string? Registration
     {
         get
         {
-            var user = _accessor.HttpContext?.User;
+            var user = accessor.HttpContext?.User;
 
-            if (user is null)
+            if (user?.Identity?.IsAuthenticated != true)
                 return null;
 
-            return user.FindFirstValue("registration") ??
-                   user.FindFirstValue("sub") ??
+            return user.FindFirstValue(TokenClaims.Registration) ??
+                   user.FindFirstValue(TokenClaims.Subject) ??
                    user.FindFirstValue(ClaimTypes.NameIdentifier) ??
                    user.Identity?.Name;
         }
@@ -30,16 +26,12 @@ public sealed class HttpContextCurrentActor : ICurrentActor
     {
         get
         {
-            var user = _accessor.HttpContext?.User;
+            var user = accessor.HttpContext?.User;
 
-            if (user?.Identity?.IsAuthenticated != true)
-                return null;
-
-            var value = user.FindFirstValue("sub") ?? user.FindFirstValue(ClaimTypes.NameIdentifier);
-
-            return ulong.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var id) ? id : null;
+            return user?.Identity?.IsAuthenticated == true ? TokenClaims.UserId(user) : null;
         }
     }
 
-    public bool IsInRole(string role) => _accessor.HttpContext?.User.IsInRole(role) ?? false;
+    public async Task<AccessProfile?> GetAccessProfileAsync(CancellationToken cancellationToken) =>
+        UserId is { } userId ? await accessProfiles.GetAsync(userId, cancellationToken) : null;
 }

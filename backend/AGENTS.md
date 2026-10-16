@@ -10,8 +10,10 @@ Estas instruções valem para `meone/backend`. Quatro projetos de código e um d
 - `MeOne.Infrastructure` — `DbContext`, mappings EF, repositories, identidade, e-mail, health checks
 - `MeOne.Tests` — xUnit, espelhando as camadas
 
-O alvo é **Clean Architecture**. Hoje o escopo funcional é o controle de acesso: autenticação e
-CRUD de usuários, roles e departamentos. Módulo novo segue a mesma estrutura descrita aqui.
+O alvo é **Clean Architecture**. O escopo funcional é o controle de acesso (autenticação e CRUD de
+usuários, roles, departamentos e escopos), o módulo **Workflow** (fluxo de aprovação), o
+**Organograma** (cargos em árvore), as **Instruções de trabalho** (documentos de processo com PDF), os
+**Fornecedores** (cadastro e qualificação) e as **Linhas e postos** (layout da linha, alocação de pessoas e produtividade por posto). Módulo novo segue a mesma estrutura descrita aqui.
 
 ## Idioma
 
@@ -81,11 +83,22 @@ service de N métodos obriga o teste de um endpoint a montar N dublês.
 ## Domain
 
 ```
-Entities/       Entity.cs (base), User, Role, UserRole, Department, ClientApplication,
-                UserApplication, RefreshToken
+Entities/       Entity.cs (base), User, Role, RolePermission, Permission, UserRole, Scope,
+                Department, ClientApplication, UserApplication, RefreshToken, PasswordResetToken,
+                Workflow (raiz) + WorkflowAssignee, WorkflowStep, WorkflowAttachment, WorkflowMessage,
+                OrgPosition, WorkInstruction + WorkInstructionStep,
+                Supplier (raiz) + SupplierTool, SupplierMaterial, SupplierSelfAssessment, SupplierAudit, SupplierDocument,
+                ProductionLine, ProductionShift, ProductionProduct, LineLayout (raiz) + LayoutPost, LayoutDecoration,
+                ProductionRun (raiz) + RunAllocation, RunOutput, RunSnapshot
+Enums/          ScopeType, WorkflowStatus/Priority/Category/Action, ReviewStage/ReviewRole,
+                WorkflowListFilter, WorkflowRefusalKind
 Errors/         constantes de mensagem por agregado + DomainRuleException
 Interfaces/     IRepository<T,TId> + contratos de repositório por agregado
-Rules/          regras puras sem estado (AccessRoles, SessionPolicy, TemporaryPasswordPolicy)
+Rules/          regras e catálogos sem estado (Permissions, RoleCatalog, AccessProfile,
+                ScopeHierarchy, SessionPolicy, LoginLockoutPolicy, PasswordResetPolicy,
+                TemporaryPasswordPolicy, AccessRoles, WorkflowRefusal, WorkflowHistoryTexts,
+                WorkflowOutcomeTexts, OrgChartHierarchy, FileSignatures,
+                WorkInstructionCodes, QualificationRules, SupplierQualification, SupplierDocumentRules, Cnpj, LayoutRules, RunProductivity)
 ```
 
 `Errors/` guarda as duas formas que uma recusa de domínio assume: a **constante de mensagem**
@@ -116,6 +129,9 @@ Mappings/       *Configuration : IEntityTypeConfiguration<T>
 Repositories/   DbContextRepository<T,TId,TContext> → Repository<T,TId> → *Repository
 Identity/       BCryptPasswordHasher, RefreshTokenGenerator (portas de Application/Interfaces/Auth)
 Email/          SmtpPasswordResetNotifier + EmailOptions; template e logo embutidos na DLL
+Storage/        LocalFileStorage (base) + LocalWorkflowFileStorage / LocalWorkInstructionFileStorage /
+                LocalSupplierFileStorage e as opções de cada uma (portas IWorkflowFileStorage,
+                IWorkInstructionFileStorage e ISupplierFileStorage)
 HealthChecks/   MeOneDatabaseHealthCheck
 ```
 
@@ -134,7 +150,8 @@ quando a entidade está `Detached`: `Update` numa entidade já rastreada marca o
 Interfaces/                          contratos, agrupados por módulo
   Auth/                              I*UseCase de sessão + portas IPasswordHasher,
                                      IAccessTokenIssuer, IRefreshTokenGenerator
-  Users/ Roles/ Departments/         I*UseCase do CRUD; Users tem a porta IPasswordResetNotifier
+  Users/ Roles/ Departments/ Scopes/ Workflows/ OrgChart/ WorkInstructions/ Suppliers/ Production/ I*UseCase do CRUD; Users tem a porta IPasswordResetNotifier,
+                                     Auth tem IAccessProfileCache e ILoadAccessProfileUseCase
   ICurrentActor.cs                   transversal: não é de módulo nenhum
 UseCases/<Módulo>/                   *UseCase + a classe estática compartilhada do módulo
 Communication/
@@ -153,7 +170,8 @@ implementado na **API** (`JwtAccessTokenIssuer`, registrado no `Program.cs`), ao
 validação do JWT: emissão e validação leem o mesmo `JwtOptions`.
 
 **O que várias operações do mesmo módulo compartilham mora numa classe estática interna na pasta
-do módulo em `UseCases/`** — `AuthMapping`, `UsersMapping`, `RolesMapping`, `DepartmentsMapping`.
+do módulo em `UseCases/`** — `AuthMapping`, `AccessGuard`, `UsersMapping`, `RolesMapping`,
+`DepartmentsMapping`, `ScopesMapping`.
 Nenhuma termina em `UseCase`, então nenhuma entra no container.
 
 **`Communication/` é o contrato de fio**, separado do caso de uso, porque responses são
@@ -240,23 +258,162 @@ Não há teste de integração contra MySQL no projeto; mapping é coberto por `
 
 ## Acesso
 
-Não há política de fallback: endpoint sem atributo é anônimo. Toda action declara o acesso.
+Autorização é **permissão**, nunca nome de papel. Papel funcional agrupa permissões; o usuário
+recebe papel sem escopo (vale em tudo) ou num nó Planta > Área > Linha > Posto, e o nó vale para
+os filhos. Catálogo de permissões em `Domain/Rules/Permissions.cs`; papéis do sistema em
+`Domain/Rules/RoleCatalog.cs` (ambos semeados por migration). Permissão nova: acrescente no
+catálogo e gere migration.
 
-- Anônimo: só a tela de login (login, refresh, valid, esqueci a senha, autocadastro, consulta
-  por matrícula, lista de departamentos), com limite por IP (`AuthPolicies.AnonymousRateLimit`).
-- Token (`[Authorize]`): leitura e logout.
-- `master` (`[Authorize(Policy = AuthPolicies.MasterOnly)]`): toda escrita de usuário, role e
-  departamento. Endpoint novo de governança entra assim, não com `[Authorize]` cru.
+Não há política de fallback: endpoint sem atributo é anônimo. Toda action declara o acesso:
 
-`AccessEndpointAuthorizationTests` trava esse mapa. O claim `roles` do token vira
-`ClaimTypes.Role` em `RolesClaimsTransformation`; é isso que `RequireRole` lê.
+- `[AllowAnonymous]`: só a tela de login (login, refresh, esqueci a senha, autocadastro, lista
+  de departamentos), com limite por IP (`AuthPolicies.AnonymousRateLimit`).
+- `[Authorize]`: o que só exige estar logado (logout, `auth/valid`, `auth/me`, leitura de escopo).
+- `[RequirePermission(Permissions.X)]`: o resto. Endpoint novo entra assim. A policy é montada
+  por `PermissionPolicyProvider`; `PermissionAuthorizationHandler` consulta o perfil de acesso.
+  Permissão `GlobalOnly` só conta se concedida sem escopo; as operacionais passam no endpoint se
+  concedidas em qualquer escopo — **o caso de uso confere o escopo do recurso** com
+  `AccessProfile.HasIn(permission, scopeChain)` (`IScopeRepository.GetChainAsync`).
 
-O token é emitido em `JwtAccessTokenIssuer` com os claims `sub`, `registration`, `department`,
-`roles`, `applications` e `aud` = `Jwt:Audiences`. Outros sistemas que validem com a mesma chave
-dependem desses nomes e do formato `string[]` de `GET /api/v1/departments` — não renomeie sem
-combinar.
+`AccessEndpointAuthorizationTests` trava o mapa action → permissão.
+
+**Perfil de acesso** (`Domain/Rules/AccessProfile`): montado do usuário com papéis, permissões e
+escopo (`IUserRepository.GetWithAccess*`). Na API fica em `AccessProfileCache` (memória, 30 s),
+que implementa a porta `IAccessProfileCache`. Caso de uso que muda papel, permissão, senha,
+desativação ou sessão chama `Invalidate(userId)` (ou `InvalidateAll()` quando muda as
+permissões de um papel). `ICurrentActor.GetAccessProfileAsync` entrega o perfil do ator.
+
+**Regras contra escalonamento** ficam nos casos de uso, via `UseCases/Auth/AccessGuard` e
+`RolesMapping.EnsureCanHandle`: ninguém concede/retira/inclui permissão que não tem no escopo;
+ninguém altera usuário que tenha permissão que o ator não tem (`AccessProfile.Dominates`); o
+último administrador ativo não sai; papel com permissão administrativa só sem escopo. Mexeu em
+caso de uso que altera usuário ou papel, mantenha essas checagens e o teste correspondente.
+
+**Sessão:** o JWT leva `sub`, `registration`, `name`, `email`, `department`, `roles` (só nomes,
+para Q-Zero/master-data), `applications`, `aud` = `Jwt:Audiences` e `sstamp`. Em
+`OnTokenValidated` a API confere usuário ativo e `sstamp` igual ao do banco: rotacionar o stamp
+(`User.RotateSecurityStamp`, chamado em troca de senha, desativação, logout e reuso de refresh)
+derruba todos os access tokens do usuário. Refresh é rotacionado e o reuso de um já usado revoga
+tudo. Não renomeie claim nem troque o formato de `GET /api/v1/departments` (`string[]`) sem
+combinar com os outros sistemas.
+
+**Não vazar informação:** login, refresh, confirmação de reset e pedido de reset respondem igual
+para usuário inexistente e para credencial errada; pedido de reset sempre 202. Erro de binding
+responde mensagem genérica. Não devolva detalhe de exceção, hash, código de reset ou senha em
+resposta (a única exceção é a senha provisória, para quem tem `users.reset-password`).
 
 Usuário tem soft delete (`HasQueryFilter(Active)` em `UserConfiguration`). Toda consulta de
 usuário esconde o desativado, **exceto** as checagens de unicidade (`RegistrationExistsAsync`,
 `EmailExistsAsync`) e "departamento em uso", que usam `IgnoreQueryFilters()` porque o índice
-único e a FK do banco continuam contando a linha.
+único e a FK do banco continuam contando a linha. A exceção documentada a essa regra é
+`GetByIdsIncludingInactiveAsync`: o histórico do Workflow precisa mostrar o nome de quem já foi
+desativado.
+
+## Workflow
+
+Fluxo de aprovação portado do SPM (engenharia). O agregado é `Workflow`; ele guarda
+responsáveis, etapas (histórico), anexos e mensagens, e **toda regra mora nele**:
+`Check*` devolve `WorkflowRefusal?` (`Invalid` → 400, `Forbidden` → 403, `NotFound` → 404) e a
+mutação correspondente lança `DomainRuleException` se alguém pular o `Check`. O caso de uso chama o
+`Check`, traduz a recusa (`WorkflowsMapping.Fail`) e só então muta.
+
+- Quem cria é responsável e aprova automaticamente. Se for o único, o workflow nasce aprovado.
+- Aprovado quando **todos os responsáveis atuais** têm uma aprovação; aí entra a etapa
+  `FinalApproval`.
+- Responsável rejeita → etapa `Rejection` em `ReviewStage.CreatorReview`. O criador **devolve**
+  (vai para `AssigneeReview`, com mensagem no chat da etapa) ou **aceita a rejeição** (workflow
+  `Rejected`, etapa `FinalRejection`). Quem rejeitou pode aprovar ou devolver de volta. A
+  justificativa original da rejeição nunca é sobrescrita; a conversa fica em `WorkflowMessage`.
+- Só o criador edita, adiciona e substitui responsáveis. Substituir é recusado se o responsável já
+  aprovou, e limpa a revisão pendente dele.
+- Workflow encerrado não aceita nenhuma ação.
+- Concorrência: `Workflow.Version` é token de concorrência e sobe a cada mutação.
+  `WorkflowRepository.SaveChangesAsync` devolve `0` no conflito (o caso de uso responde
+  `NothingPersisted`) — sem isso duas últimas aprovações simultâneas deixariam o workflow parado.
+- Anexos: até 5 por workflow, 10 MB cada, só na criação. Vão para `IWorkflowFileStorage`
+  (disco, `Workflow:Storage:Path`, padrão `uploads/workflows`) com nome gerado; o download passa
+  pela API autenticada e sai como anexo. Falhou o banco, o caso de uso apaga os arquivos.
+- Permissão única `workflow.use` (não global) e papel de sistema `workflow` (id 9, anexado ao fim do
+  `RoleCatalog` para não deslocar os ids de `role_permissions` já semeados).
+- **Fora do escopo por ora:** e-mails de prazo próximo/vencido (o `cron` do SPM).
+`WorkflowEndpointTests` sobe Kestrel real com fakes e trava binding multipart, JSON e status.
+
+## Organograma
+
+Árvore de **cargos** (`OrgPosition`): cada cargo tem título, departamento, cargo superior opcional e
+ocupante opcional (cargo vago é válido). Pode haver mais de uma raiz.
+
+- Um colaborador ocupa no máximo **um** cargo (índice único em `fk_holder`); o ocupante precisa estar ativo.
+  Desativar o usuário não desocupa o cargo: o organograma continua mostrando quem ocupa, marcado como inativo.
+- Mover um cargo é recusado se o destino for ele mesmo ou um subordinado (`OrgChartHierarchy.IsSelfOrBelow`)
+  ou se a árvore passar de `OrgChartHierarchy.MaxDepth` (12) níveis. Excluir só é possível sem subordinados.
+- Leitura (`GET api/v1/org-chart`) é `[Authorize]`, para qualquer pessoa logada. Escrever exige
+  `orgchart.manage` (global, papel de sistema `organograma`, id 10). A resposta traz `canManage` para a tela.
+
+## Instruções de trabalho
+
+Documento de processo portado do SPM (`WorkInstruction`): código único, título, nº do documento, produto,
+elaborado/aprovado por, EPIs, especificações, observações, **PDF obrigatório** e passos opcionais (texto + imagem).
+
+- O PDF pode vir pronto (upload) ou ser gerado pelo frontend a partir dos passos; para o servidor é sempre um arquivo.
+  O conteúdo é conferido pela assinatura (`FileSignatures`), não pelo MIME declarado: PDF até 10 MB, imagem de passo
+  (PNG, JPEG, GIF ou WebP) até 5 MB, no máximo 50 passos.
+- Criar e editar usam o mesmo corpo multipart (`SaveWorkInstructionRequest` + arquivo `pdf` + `stepImages[i]`). Na edição,
+  cada passo com `id` é mantido e editado; sem `id` é novo; passo que não vem é removido. `removeImage` limpa a imagem.
+  Arquivo substituído ou removido só é apagado do disco depois do commit; falhou o banco, apaga o que acabou de gravar.
+- Leitura (lista, detalhe, PDF inline, imagem do passo) é `[Authorize]` para qualquer pessoa logada, porque o chão de
+  fábrica consulta. Escrita e geração de código exigem `engineering.manage` (reaproveitada; a descrição foi ampliada).
+- `GET next-code` sugere o código `IT-yyyyMMdd-XXXXX` do original; a unicidade é checada na criação e na edição.
+- Arquivos em `WorkInstruction:Storage:Path` (padrão `uploads/work-instructions`).
+
+## Fornecedores
+
+Cadastro e qualificação de fornecedores portados do SPM-Qualidade (`Supplier`): código SAP único por filial Multi,
+nome fantasia, origem (nacional ou internacional), CNPJ (validado pelos dígitos quando nacional), criticidade, endereço e
+contato. O agregado guarda ferramentais, materiais, auto avaliações, auditorias e documentos.
+
+- **Qualificação vigente** é derivada, não armazenada: vale a auditoria in loco mais recente; sem auditoria, a auto avaliação
+  mais recente (com `AuditPending` quando ela pede auditoria). Vencimento é calculado: auto avaliação = data + 1 ano + 1 dia;
+  auditoria = data + 3, 6 ou 12 meses. Vencido nunca é "aprovado" nos filtros de status (`SupplierQualification.Matches`).
+- Ferramental, material, auto avaliação e auditoria são sub-recursos REST (`POST/PUT/DELETE api/v1/suppliers/{id}/tools|materials|self-assessments|audits`).
+  Remover é lógico (`Active = false`), como o `ativo=0` do original. O responsável pela validação precisa ser usuário ativo.
+- **Documentos** são uma entidade só (`SupplierDocument`) com `Kind` e `OwnerId` opcional: apresentação, certificados (do fornecedor);
+  desenho de ferramental, documento de material, anexo da auto avaliação, declaração e relatório de auditoria (de um item, `OwnerId` obrigatório).
+  Apresentação, anexo, declaração e relatório substituem o anterior do mesmo dono. Só PDF, JPG e PNG, conferidos pela assinatura, até 10 MB.
+  Arquivo substituído ou removido só é apagado do disco depois do commit.
+- **Quem edita:** quem cadastrou o fornecedor ou quem tem `suppliers.manage`. Toda escrita exige `suppliers.register`; o dono é conferido no caso de uso
+  (403 para os demais). Leitura (lista, detalhe, arquivo) é `[Authorize]`. Papéis de sistema: `fornecedores` (id 11, registra) e
+  `gestor-fornecedores` (id 12, registra e gerencia). Ambas as permissões são não globais.
+- Lista filtra por busca, origem, filial, criticidade e status (inclusive `notEvaluated` e `expired`); o status é calculado em memória sobre
+  as avaliações carregadas, então a paginação acontece depois do filtro.
+- Arquivos em `Supplier:Storage:Path` (padrão `uploads/suppliers`).
+- Fora do port: e-mail no cadastro, gráficos IQC/TAF (dependem de outros módulos) e consulta ao catálogo de SKUs
+  (SKU e BU são texto livre).
+
+## Linhas e postos (layout, alocação e produtividade)
+
+Portado do módulo Matriz de capacitação do Sync, trocando o foco: em vez de treinar pessoas, o mapa serve para
+**alocar pessoas nos postos, iniciar a produção pelo sistema e medir a produtividade de cada posto**.
+Treinamentos, ranks, scores e relatório de experiência ficaram de fora.
+
+- **Cadastros próprios** (`ProductionLine`, `ProductionShift`, `ProductionProduct`): o Sync traz linhas, produtos e turnos de SAP e Bifrost; aqui são telas simples.
+  Pessoas são os usuários do MeOne. Desativar é o jeito de "remover": layouts e produções antigas continuam apontando para o cadastro.
+- **Layout** (`LineLayout`) é o mapa de uma combinação linha + produto + turno (única). Os postos (`LayoutPost`: comum, máquina ou qualidade,
+  crítico, meta por hora, operação) e as decorações (esteira, área, seta, equipamento, atenção, estante, bancada, pilar) são linhas
+  normalizadas, não JSON como no Sync. Salvar usa o mesmo corpo do editor: posto com `id > 0` é atualizado, `id <= 0` é novo e o que
+  não vem é removido (`LineLayout.Replace`). Nome de posto é único no layout, sem diferenciar maiúsculas. Copiar para outros destinos
+  sobrescreve o conteúdo do destino que já existir.
+- **Produção** (`ProductionRun`) nasce de um layout em `Preparing` com um **snapshot** do mapa (JSON em `layout_snapshot`). Editar o layout depois não
+  muda uma produção em curso nem o histórico. Fluxo: preparar → alocar pessoas → iniciar (`Running`) → lançar produção → encerrar (`Closed`).
+  Só uma produção ativa por linha. Cancelar só vale em preparo.
+- **Alocação**: posto comum é exclusivo e a pessoa não acumula outro posto; **máquina** deixa a mesma pessoa em até 5 (constante
+  `ProductionMapping.MaxMachinePostsPerPerson`); misturar máquina e comum é recusado; quem está em outra produção ativa não é alocado. Trocar o ocupante
+  fecha a alocação anterior (o histórico de `RunAllocation` fica, com `ReleasedAt`). Encerrar libera todos. Iniciar exige alguém alocado e todos os
+  postos críticos ocupados. "Repetir alocação anterior" casa os postos pelo nome com a última produção encerrada do mesmo layout.
+- **Produtividade** (`RunProductivity`): lançamento manual por posto e hora (`RunOutput`, único por run+posto+hora, o mesmo lançamento substitui o anterior), creditado a
+  quem ocupava o posto naquela hora. Esperado = meta por hora × tempo ocupado dentro da produção; atingimento = produzido ÷ esperado.
+  Tempo por pessoa é a união dos intervalos, então quem cuida de duas máquinas ao mesmo tempo não conta em dobro.
+- **Permissões** (todas já existentes, não globais): `engineering.manage` mantém cadastros e layouts; `production.supervise` prepara, aloca, inicia, encerra e
+  cancela; `production.execute` lança produção. Leitura é `[Authorize]`. As respostas trazem `canManage`, `canSupervise` e `canRecord` para a tela.
+- Fora do port: treinamentos, ranks e scores, alocação rápida por QR Code, integração com SAP, MQTT e catraca (a quantidade é lançada à mão), copiar
+  alocação de um dia qualquer e a edição de um layout compartilhado por vários produtos ao mesmo tempo.

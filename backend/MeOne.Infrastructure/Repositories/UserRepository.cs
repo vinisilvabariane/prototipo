@@ -1,5 +1,6 @@
 using MeOne.Domain.Entities;
 using MeOne.Domain.Interfaces;
+using MeOne.Domain.Rules;
 using MeOne.Infrastructure.Data.Context;
 using Microsoft.EntityFrameworkCore;
 
@@ -58,9 +59,36 @@ public sealed class UserRepository(MeOneDbContext context)
             .Take(take)
             .ToListAsync(cancellationToken);
 
+    public Task<int> CountActiveAdministratorsAsync(CancellationToken cancellationToken) =>
+        DbSet.CountAsync(
+            user => user.Roles.Any(link => link.ScopeId == null && link.Role!.Name == AccessRoles.Master),
+            cancellationToken);
+
+    public async Task<IReadOnlyList<User>> ListActiveAsync(CancellationToken cancellationToken) =>
+        await DbSet.AsNoTracking()
+            .Include(user => user.Department)
+            .OrderBy(user => user.Name)
+            .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<User>> GetActiveByIdsAsync(
+        IReadOnlyCollection<ulong> ids,
+        CancellationToken cancellationToken) =>
+        await DbSet.AsNoTracking()
+            .Where(user => ids.Contains(user.Id))
+            .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<User>> GetByIdsIncludingInactiveAsync(
+        IReadOnlyCollection<ulong> ids,
+        CancellationToken cancellationToken) =>
+        await DbSet.IgnoreQueryFilters()
+            .AsNoTracking()
+            .Where(user => ids.Contains(user.Id))
+            .ToListAsync(cancellationToken);
+
     private IQueryable<User> WithAccess() =>
         DbSet.Include(user => user.Department)
-            .Include(user => user.Roles).ThenInclude(link => link.Role)
+            .Include(user => user.Roles).ThenInclude(link => link.Role!).ThenInclude(role => role.Permissions)
+            .Include(user => user.Roles).ThenInclude(link => link.Scope)
             .Include(user => user.Applications).ThenInclude(link => link.Application)
             .AsSplitQuery();
 

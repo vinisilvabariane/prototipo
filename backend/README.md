@@ -18,87 +18,153 @@ As convenções de código (camadas, nomes, DI por convenção, validação auto
 
 ## Regra de acesso
 
-Não há política de fallback: endpoint sem atributo seria anônimo, então **toda action declara
-o acesso** (`[AllowAnonymous]`, `[Authorize]` ou `[Authorize(Policy = AuthPolicies.MasterOnly)]`).
+A autorização é por **papel funcional** (o que a pessoa faz) com **escopo** (onde ela atua) como
+segundo eixo. Papéis agrupam permissões; o usuário recebe papéis, cada um sem escopo (vale em
+tudo) ou num nó da hierarquia **Planta > Área > Linha > Posto**. Uma atribuição vale para o nó e
+para tudo abaixo dele: supervisor da Área A vale em todas as linhas e postos da Área A.
 
-- **Anônimo**: só o que a tela de login precisa — login, refresh, `valid`, esqueci a senha,
-  autocadastro, consulta de usuário por matrícula, lista de departamentos e `GET /health/live|ready`.
-  As rotas de credencial têm limite por IP.
-- **Token**: leitura de usuários e roles, logout, `GET /health` (detalhado).
-- **`master`**: toda escrita de usuário, role e departamento. Quem não tem a role recebe
-  **403** com o envelope de erro padrão.
+Não há política de fallback: endpoint sem atributo seria anônimo, então **toda action declara o
+acesso**: `[AllowAnonymous]`, `[Authorize]` (só estar logado) ou `[RequirePermission(...)]`.
 
-A tabela completa está abaixo, em "Controle de acesso". `AccessEndpointAuthorizationTests` trava
-esse mapa.
+- **Anônimo**: só o que a tela de login precisa — login, refresh, esqueci a senha (pedido e
+  confirmação), autocadastro, lista de departamentos e `GET /health/live|ready`. As rotas de
+  credencial têm limite por IP.
+- **Logado**: logout, `auth/valid`, `auth/me` e leitura de escopos.
+- **Por permissão**: todo o resto (ver tabela em "Controle de acesso"). Sem a permissão a resposta
+  é **403** com o envelope de erro padrão.
+
+`AccessEndpointAuthorizationTests` trava esse mapa.
 
 ## Controle de acesso
 
-Portado do `access-control-api` (que deixa de existir como serviço). Mesmas tabelas, mesmos
-claims no JWT e mesmas rotas — só que sob `/api/v1` desta API. Código nos módulos `Auth`,
-`Users`, `Roles` e `Departments` de cada camada.
+Portado do `access-control-api` e redesenhado para MES. Código nos módulos `Auth`, `Users`,
+`Roles`, `Departments` e `Scopes` de cada camada.
 
-| Endpoint | Acesso | |
+### Permissões, papéis e escopo
+
+As permissões são um **catálogo fixo no código** (`Domain/Rules/Permissions.cs`), espelhado na
+tabela `permissions` pela migration. As de administração só valem **sem escopo** (`global_only`):
+
+| Permissão | Para quê | Só sem escopo |
 | --- | --- | --- |
-| `POST /api/v1/auth` | anônimo, limite por IP | login → `{ token, refreshToken, refreshExpires }`. Revoga as sessões anteriores do usuário |
-| `POST /api/v1/auth/refresh` | anônimo | rotação: o refresh usado é revogado e um novo é emitido. Falha → **400** (não 401, para o interceptor do front não renovar em laço) |
-| `POST /api/v1/auth/logout` | token | `{ userId }`: o próprio usuário, ou qualquer um se for `master` (403 caso contrário) |
-| `POST /api/v1/auth/valid` | anônimo, limite por IP | confere matrícula e senha sem abrir sessão |
-| `GET /api/v1/users?page=0&pageSize=10&search=` | token | página **começa em 0**; busca por nome/e-mail (contém) ou matrícula (exata) |
-| `GET /api/v1/users/{id}` | token | 404 se não existe ou está desativado |
-| `GET /api/v1/users/roles/{userId}` | token | roles do usuário (lista vazia se não existe) |
-| `POST /api/v1/users` | `master` | cria; e-mail tem que ser `@grupomultilaser.com.br` |
-| `PUT /api/v1/users/{id}` | `master` | |
-| `DELETE /api/v1/users/{id}` | `master` | soft delete (`active = 0`) + derruba as sessões. Não dá para desativar a si mesmo |
-| `PUT /api/v1/users/reset-password-manually` | `master` | `{ userId, newPassword }` → 204, derruba as sessões |
-| `POST /api/v1/users/reset-password/{registration}` | anônimo, limite por IP | "esqueci a senha": gera `Multi` + 6 caracteres. Anônimo recebe **só por e-mail** (`newPassword: null`); master recebe na resposta |
-| `GET /api/v1/users/get-by-registration/{registration}` | anônimo, limite por IP | 400 se não existe (como no Access Control) |
-| `POST /api/v1/users/not-authenticated` | anônimo, limite por IP | autocadastro; nasce sem role |
-| `GET /api/v1/roles?page=0&pageSize=10`, `GET /api/v1/roles/all`, `GET /api/v1/roles/{id}` | token | |
-| `POST`/`PUT`/`DELETE /api/v1/roles[/{id}]` | `master` | a role `master` não pode ser renomeada nem excluída; role em uso não exclui |
-| `POST /api/v1/roles/set-role`, `POST /api/v1/roles/revoke-role` | `master` | `{ userId, roleId }`. Ninguém tira a `master` de si mesmo |
-| `GET /api/v1/departments` | anônimo | **`string[]`** só com os nomes — formato que o SYNC/Q-Zero consome, não mudar |
-| `GET /api/v1/departments/all` | anônimo | `{ id, name }[]` |
-| `POST`/`PUT`/`DELETE /api/v1/departments[/{id}]` | `master` | nome sempre em minúsculas; departamento com usuário (mesmo desativado) não exclui |
+| `users.read` | consultar usuários | sim |
+| `users.manage` | cadastrar, editar e desativar usuários | sim |
+| `users.reset-password` | redefinir a senha de usuários | sim |
+| `roles.read` | consultar papéis e permissões | sim |
+| `roles.manage` | criar e editar papéis e suas permissões | sim |
+| `roles.assign` | atribuir e revogar papéis | sim |
+| `departments.manage` | cadastrar e editar departamentos | sim |
+| `scopes.manage` | cadastrar plantas, áreas, linhas e postos | sim |
+| `system.health` | ver a saúde detalhada (`GET /health`) | sim |
+| `production.read` / `.execute` / `.supervise` | consultar, apontar, supervisionar produção | não |
+| `quality.inspect` / `.release` | inspecionar, liberar/bloquear material | não |
+| `maintenance.request` / `.execute` | abrir e atender chamados | não |
+| `engineering.manage` | roteiros, setups e parâmetros | não |
+| `planning.manage` | planejar e sequenciar ordens | não |
 
-**JWT** (HS256, `Jwt:Key`): `sub` (id), `name`, `email`, `jti`, `registration`, `department`
-(nome), `roles` (array), `applications` (array, só aplicações ativas), `aud` = todos de
-`Jwt:Audiences`, `iss` = `Jwt:Issuer`. Role atribuída/revogada só aparece no token no próximo
-login ou refresh. `AccessEndpointAuthorizationTests` trava o mapa de acesso acima.
+Os papéis que nascem na migration (`Domain/Rules/RoleCatalog.cs`):
+
+| Papel | Permissões |
+| --- | --- |
+| `master` (id 1) | **todas**, inclusive as que forem criadas depois. Só sem escopo. Não pode ser renomeado, excluído nem ter permissões editadas |
+| `gestor-acessos` | `users.*`, `roles.read`, `roles.assign`, `departments.manage` |
+| `supervisor-producao` | `production.*`, `quality.inspect`, `maintenance.request` |
+| `operador` | `production.read`, `production.execute`, `maintenance.request` |
+| `qualidade` | `production.read`, `quality.inspect`, `quality.release` |
+| `manutencao` | `production.read`, `maintenance.request`, `maintenance.execute` |
+| `engenharia-processos` | `production.read`, `engineering.manage`, `quality.inspect` |
+| `pcp` | `production.read`, `planning.manage` |
+
+Outros papéis se criam pela API (`POST /roles` com a lista de permissões).
+
+**Regras que impedem escalonamento:**
+
+- Ninguém concede, retira nem inclui num papel uma permissão que não tem — no escopo em questão.
+  Um supervisor da Área A não consegue dar um papel válido na Área B.
+- Ninguém edita, desativa, troca a senha ou derruba a sessão de um usuário que tenha alguma
+  permissão que o ator não tenha (sem escopo). Gestor de acessos não mexe no administrador.
+- O último administrador ativo não pode ser desativado nem perder o `master`, e ninguém tira o
+  `master` de si mesmo.
+- Papel com permissão administrativa só pode ser atribuído sem escopo.
+
+**Como a permissão é resolvida:** o JWT carrega só identidade (`sub`, `registration`, `name`,
+`email`, `department`), o claim `roles` (nomes dos papéis, compatível com Q-Zero/master-data) e o
+`sstamp`. A cada requisição a API carrega o perfil de acesso do banco (cache de 30 s por usuário).
+Mudança de papel ou permissão vale em segundos, sem esperar o token expirar.
+
+### Sessão e senha
+
+- **Login**: `{ registration, password }` → `{ token, refreshToken, refreshExpires }`. Matrícula
+  inexistente, senha errada e conta bloqueada respondem igual (401, mesma mensagem, mesmo tempo).
+  **5 erros seguidos bloqueiam a conta por 15 min.** O login derruba as sessões anteriores.
+- **Access token**: 15 min (`Jwt:ExpirationInMinutes`), HS256 (outros algoritmos recusados),
+  tolerância de relógio de 30 s. Leva o `sstamp` do usuário; **trocar a senha, desativar, fazer
+  logout ou detectar roubo de refresh muda o stamp e derruba na hora todos os access tokens** dele.
+- **Refresh token**: rotação a cada uso; o banco guarda só o SHA-256. **Reusar um refresh já
+  usado é tratado como roubo**: todas as sessões do usuário caem. Refresh inválido responde 400.
+- **Esqueci a senha** (anônimo):
+  1. `POST /users/password-reset { registration }` → sempre **202**, exista o usuário ou não. Se
+     ele tem e-mail, recebe um código de 8 caracteres válido por 15 min (no máximo um pedido por
+     minuto). A senha atual continua valendo.
+  2. `POST /users/password-reset/confirm { registration, code, newPassword }` → 204. Código errado
+     5 vezes invalida o pedido. Matrícula inexistente e código errado respondem igual.
+- **Senha provisória** (`POST /users/{id}/temporary-password`, `users.reset-password`): devolve
+  `Multi` + 12 caracteres aleatórios para o administrador repassar.
+- Senha nova: 8 a 72 **bytes** (limite do BCrypt). Login aceita senha antiga mais curta.
+
+### Endpoints
+
+| Endpoint | Acesso |
+| --- | --- |
+| `POST /api/v1/auth`, `POST /api/v1/auth/refresh` | anônimo, limite por IP |
+| `POST /api/v1/auth/logout` `{ userId }` | logado; outro usuário exige `users.manage` |
+| `POST /api/v1/auth/valid` `{ registration, password }` | logado; só a própria matrícula |
+| `GET /api/v1/auth/me` | logado — identidade, papéis com escopo e permissões efetivas |
+| `GET /api/v1/users`, `GET /users/{id}`, `GET /users/get-by-registration/{registration}`, `GET /users/roles/{userId}` | `users.read` |
+| `POST /users`, `PUT /users/{id}`, `DELETE /users/{id}` | `users.manage` |
+| `PUT /users/reset-password-manually`, `POST /users/{id}/temporary-password` | `users.reset-password` |
+| `POST /users/password-reset`, `POST /users/password-reset/confirm`, `POST /users/not-authenticated` | anônimo, limite por IP |
+| `GET /api/v1/roles`, `GET /roles/all`, `GET /roles/{id}`, `GET /api/v1/permissions` | `roles.read` |
+| `POST /roles`, `PUT /roles/{id}`, `PUT /roles/{id}/permissions`, `DELETE /roles/{id}` | `roles.manage` |
+| `POST /roles/set-role`, `POST /roles/revoke-role` `{ userId, roleId, scopeId? }` | `roles.assign` |
+| `GET /api/v1/departments`, `GET /departments/all` | anônimo (`string[]` / `{ id, name }[]`) |
+| `POST/PUT/DELETE /departments` | `departments.manage` |
+| `GET /api/v1/scopes`, `GET /scopes/{id}` | logado |
+| `POST/PUT/DELETE /scopes` `{ type, code, name, parentId }` | `scopes.manage` |
+| `GET /health` (detalhado) | `system.health` |
+
+`GET /users/roles/{userId}` devolve `{ id, name, description, scopeId, scopeCode, scopeName }` por
+atribuição. `type` de escopo: `plant`, `area`, `line`, `workstation`; o pai tem que ser do nível
+imediatamente acima.
+
+### Outras proteções
+
+- Erros de corpo inválido (JSON malformado, tipo errado) respondem uma mensagem genérica, sem
+  detalhe interno do parser. Erro 500 fora de Development não expõe a exceção.
+- Headers em toda resposta: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
+  `Referrer-Policy: no-referrer`, `Cross-Origin-Opener-Policy: same-origin`; nas rotas `/api`,
+  `Cache-Control: no-store`. O Kestrel não envia o header `Server`.
+- Login falho fica no log (matrícula e IP, nunca a senha).
 
 ### O que mudou em relação ao Access Control
 
-Bugs e brechas corrigidos no port — quem consumia o serviço antigo precisa saber:
-
-- **Refresh token**: o AC devolvia ao cliente o próprio hash guardado no banco (o hash não
-  protegia nada). Agora o cliente recebe o valor cru e o banco guarda só o SHA-256. Validade em
-  `Jwt:RefreshTokenExpirationInHours` (o AC usava 1 h no login e 8 h no refresh, fixos no código).
-  **Todo mundo precisa logar de novo depois da troca.**
-- **`aud`** vem da configuração (era fixo no código).
-- **Rotas que estavam abertas**: `set-role`/`revoke-role` (qualquer um, sem login) e
-  `reset-password-manually` (anônimo, trocava a senha de qualquer id) agora exigem `master`.
-  Criar/editar/desativar usuário exige `master` (antes bastava estar logado). Leitura de roles
-  passou a exigir token.
-- **Reset anônimo** devolvia a senha nova a quem soubesse a matrícula. Agora a senha só vai por
-  e-mail; sem e-mail cadastrado ou com falha no envio, a senha antiga é mantida.
-- **`modifiedBy`/`deletedBy`** saem do token, não do corpo (o corpo era confiado cegamente). Os
-  campos antigos no JSON são ignorados.
-- **Senha**: nova senha tem 8 a 72 caracteres (72 é o limite do BCrypt). O login não exige
-  mínimo — o AC cadastrava senha de 6 e barrava login com menos de 8.
-- **Paginação** de roles começa em 0, igual à de usuários (era 1), e `totalCount` é o total da
-  tabela (era o tamanho da página).
-- **Departamento** é normalizado para minúsculas na gravação e na busca (antes dependia de
-  alguém cadastrar em minúsculas).
-- **Matrícula/e-mail de usuário desativado** contam como ocupados — o índice único do banco
-  conta, e o AC estourava erro de banco.
-- **Logout** não é mais só de `master`: cada usuário encerra a própria sessão.
-- Sem e-mail configurado ou com falha de SMTP, o erro é logado; o AC engolia em silêncio.
+- **Refresh token**: o AC devolvia ao cliente o próprio hash guardado no banco. Agora o cliente
+  recebe o valor cru e o banco guarda só o SHA-256. **Todo mundo precisa logar de novo.**
+- **Autorização**: saiu o "é master ou não"; entrou permissão por papel e escopo. `set-role` e
+  `revoke-role` aceitam `scopeId` (opcional — sem ele, vale em tudo).
+- **Esqueci a senha**: o AC gerava a senha nova e devolvia a quem soubesse a matrícula. Agora é
+  código por e-mail e confirmação; a senha só muda quando o dono confirma.
+- **Rotas que estavam abertas** (`set-role`, `revoke-role`, `reset-password-manually`,
+  `get-by-registration`, `auth/valid`) agora exigem login e permissão.
+- **`modifiedBy`/`deletedBy`** saem do token, não do corpo.
+- Paginação de roles começa em 0 e `totalCount` é o total da tabela; departamento normalizado em
+  minúsculas; matrícula/e-mail de usuário desativado contam como ocupados.
 
 ### Schema
 
-O schema é definido pelas **migrations do EF** em `MeOne.Infrastructure/Migrations` — ver "Banco de
-dados local" e "Migrations" abaixo. A `Initial` cria as 7 tabelas (`users`, `roles`, `user_roles`,
-`departments`, `applications`, `user_applications`, `refresh_tokens`) com o mesmo layout do banco
-`access_control`, e já insere a role `master` (id 1). Para ver o SQL:
+O schema é definido pelas **migrations do EF** em `MeOne.Infrastructure/Migrations`:
+`Initial` (tabelas do Access Control) e `PermissionsAndScopes` (permissões, papéis do catálogo,
+escopos, códigos de reset, colunas de bloqueio e `security_stamp`). Para ver o SQL:
 
 ```
 dotnet ef migrations script --project MeOne.Infrastructure --startup-project MeOne.API
@@ -113,27 +179,23 @@ os dados. Antes, confira se a normalização de departamento não colide:
 
 ```sql
 INSERT INTO meone.departments (id, name) SELECT id, LOWER(TRIM(name)) FROM access_control.departments;
-DELETE FROM meone.roles; -- tira a master semeada pela migration: as roles vêm do AC
-INSERT INTO meone.roles (id, name, description) SELECT id, name, description FROM access_control.roles;
 INSERT INTO meone.applications (id, name, active) SELECT id, name, active FROM access_control.applications;
 INSERT INTO meone.users (id, registration, name, email, password, active, modified_at, modified_by, fk_department)
   SELECT id, registration, name, email, password, active, modified_at, modified_by, fk_department FROM access_control.users;
-INSERT INTO meone.user_roles (id, fk_user, fk_role) SELECT id, fk_user, fk_role FROM access_control.user_roles;
+UPDATE meone.users SET security_stamp = REPLACE(UUID(), '-', '');
+INSERT INTO meone.roles (id, name, description)
+  SELECT id + 1000, name, description FROM access_control.roles WHERE name <> 'master';
+INSERT INTO meone.user_roles (fk_user, fk_role)
+  SELECT ur.fk_user, IF(r.name = 'master', 1, r.id + 1000)
+  FROM access_control.user_roles ur JOIN access_control.roles r ON r.id = ur.fk_role;
 INSERT INTO meone.user_applications (id, fk_user, fk_application) SELECT id, fk_user, fk_application FROM access_control.user_applications;
--- refresh_tokens não migra: os do AC guardam o valor que o cliente tem, e o formato mudou.
 ```
+
+Os papéis antigos do AC entram com `id + 1000` e **sem permissões**: eles eram só nomes. Depois da
+cópia, dê a cada usuário um papel do catálogo (com escopo, quando fizer sentido) e exclua os papéis
+antigos que ficarem sem uso. `refresh_tokens` não migra: o formato mudou.
 
 As senhas são BCrypt custo 12 nos dois lados — continuam valendo.
-
-**Banco que já tem as tabelas** (criado à mão antes das migrations): não rode a `Initial` — ela
-tentaria recriar tudo. Marque-a como aplicada e siga com as próximas normalmente:
-
-```sql
-CREATE TABLE IF NOT EXISTS `__EFMigrationsHistory` (
-  `MigrationId` varchar(150) NOT NULL, `ProductVersion` varchar(32) NOT NULL,
-  PRIMARY KEY (`MigrationId`));
-INSERT INTO `__EFMigrationsHistory` VALUES ('20261013131123_Initial', '9.0.10');
-```
 
 ### Primeiro master (banco novo)
 
@@ -155,7 +217,37 @@ INSERT INTO user_roles (fk_user, fk_role)
 SELECT id, 1 FROM users WHERE registration = 1001;
 ```
 
-Depois disso, departamentos, roles e usuários se cadastram pela API, como master.
+Depois disso, escopos, departamentos, papéis e usuários se cadastram pela API, como master.
+
+## Workflow
+
+Fluxo de aprovação (portado do SPM): criar com responsáveis e anexos, aprovar, rejeitar com
+negociação entre quem rejeitou e o criador, substituir responsáveis e acompanhar o histórico.
+Endpoints em `api/v1/workflows` (`WorkflowsController`), todos exigem a permissão `workflow.use`,
+concedida pelo papel `workflow`. As regras estão descritas no `AGENTS.md`. Os avisos por e-mail de
+prazo ainda não foram portados.
+
+## Organograma
+
+Árvore de cargos da empresa (cargo, departamento, cargo superior e ocupante). Todo usuário logado consulta em
+`GET api/v1/org-chart`; criar, mover, definir ocupante e excluir cargos exige a permissão `orgchart.manage`,
+concedida pelo papel `organograma`. Regras no `AGENTS.md`.
+
+## Instruções de trabalho
+
+Cadastro de instruções com PDF e passos ilustrados (portado do SPM). Qualquer usuário logado consulta em
+`api/v1/work-instructions`; criar, editar e excluir exige `engineering.manage`. Regras no `AGENTS.md`.
+
+## Fornecedores
+
+Cadastro e qualificação (portado do SPM-Qualidade) em `api/v1/suppliers`. Qualquer usuário logado consulta; escrever exige
+`suppliers.register` e, em fornecedor de outra pessoa, `suppliers.manage`. Regras no `AGENTS.md`.
+
+## Linhas e postos
+
+Mapa da linha, alocação de pessoas, início e encerramento da produção e produtividade por posto, em `api/v1/production`
+(`lines`, `shifts`, `products`, `layouts`, `runs`). Qualquer usuário logado consulta; cadastros e layouts exigem `engineering.manage`,
+alocar e iniciar exigem `production.supervise` e lançar produção exige `production.execute`. Regras no `AGENTS.md`.
 
 ## Banco de dados local
 
@@ -201,6 +293,10 @@ têm padrão no código. Preencha por variáveis de ambiente ou `dotnet user-sec
   de credencial. Atrás de proxy sem `X-Forwarded-For` tratado, todo mundo vira o mesmo IP
 - `Cors__Origins__0` — origens liberadas fora de Development (em Development qualquer origem passa)
 - `Swagger__Enabled` — liga o Swagger fora de Development
+- `Supplier__Storage__Path` — pasta dos documentos de fornecedores (padrão `uploads/suppliers`)
+- `WorkInstruction__Storage__Path` — pasta dos PDFs e imagens das instruções (padrão `uploads/work-instructions`)
+- `Workflow__Storage__Path` — pasta dos anexos do Workflow (padrão `uploads/workflows`, relativa ao
+  diretório de execução). Em contêiner, monte um volume nela
 
 A API recusa subir sem `Jwt:Key`, `Jwt:Audiences` e `ConnectionStrings:MeOne`.
 

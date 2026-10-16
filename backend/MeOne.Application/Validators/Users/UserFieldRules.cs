@@ -22,7 +22,8 @@ internal static class UserFieldRules
 
     public static IRuleBuilderOptions<T, string> ValidNewPassword<T>(this IRuleBuilder<T, string> rule) =>
         rule.NotEmpty().WithMessage(UserErrors.PasswordRequired)
-            .Length(UserErrors.MinPasswordLength, UserErrors.MaxPasswordLength)
+            .Must(password => password.Length >= UserErrors.MinPasswordLength &&
+                              System.Text.Encoding.UTF8.GetByteCount(password) <= UserErrors.MaxPasswordLength)
             .WithMessage(UserErrors.PasswordLength);
 
     public static IRuleBuilderOptions<T, string> ValidDepartment<T>(this IRuleBuilder<T, string> rule) =>

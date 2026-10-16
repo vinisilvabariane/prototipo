@@ -16,7 +16,7 @@ public sealed class UpdateRoleUseCase(IRoleRepository roles) : IUpdateRoleUseCas
         if (role is null)
             return Result.Fail(new NotFoundError(RoleErrors.NotFound));
 
-        if (AccessRoles.IsMaster(role.Name) && !AccessRoles.IsMaster(request.Name))
+        if (role.IsAdministrator != AccessRoles.IsMaster(request.Name))
             return Result.Fail(RoleErrors.MasterRoleProtected);
 
         var name = request.Name.Trim();

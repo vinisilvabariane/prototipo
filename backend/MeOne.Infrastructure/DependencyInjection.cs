@@ -1,11 +1,15 @@
 using MeOne.Application.Interfaces;
 using MeOne.Application.Interfaces.Auth;
 using MeOne.Application.Interfaces.Users;
+using MeOne.Application.Interfaces.Suppliers;
+using MeOne.Application.Interfaces.WorkInstructions;
+using MeOne.Application.Interfaces.Workflows;
 using MeOne.Domain.Rules;
 using MeOne.Infrastructure.Data.Context;
 using MeOne.Infrastructure.Email;
 using MeOne.Infrastructure.HealthChecks;
 using MeOne.Infrastructure.Identity;
+using MeOne.Infrastructure.Storage;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -53,6 +57,7 @@ public static class DependencyInjection
     {
         services.AddMeOneDatabase(configuration);
         services.AddIdentity(configuration);
+        services.AddWorkflowStorage(configuration);
         services.AddMeOneHealthChecks(configuration);
 
         return services;
@@ -89,6 +94,18 @@ public static class DependencyInjection
 
         services.Configure<EmailOptions>(configuration.GetSection(EmailOptions.SectionName));
         services.AddScoped<IPasswordResetNotifier, SmtpPasswordResetNotifier>();
+    }
+
+    private static void AddWorkflowStorage(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.Configure<WorkflowStorageOptions>(configuration.GetSection(WorkflowStorageOptions.SectionName));
+        services.AddSingleton<IWorkflowFileStorage, LocalWorkflowFileStorage>();
+
+        services.Configure<WorkInstructionStorageOptions>(configuration.GetSection(WorkInstructionStorageOptions.SectionName));
+        services.AddSingleton<IWorkInstructionFileStorage, LocalWorkInstructionFileStorage>();
+
+        services.Configure<SupplierStorageOptions>(configuration.GetSection(SupplierStorageOptions.SectionName));
+        services.AddSingleton<ISupplierFileStorage, LocalSupplierFileStorage>();
     }
 
     private static void AddMeOneHealthChecks(this IServiceCollection services, IConfiguration configuration)

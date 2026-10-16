@@ -34,9 +34,10 @@ public sealed class JwtAccessTokenIssuer : IAccessTokenIssuer
             [JwtRegisteredClaimNames.Name] = user.Name,
             [JwtRegisteredClaimNames.Jti] = Guid.NewGuid().ToString(),
             [JwtRegisteredClaimNames.Aud] = _options.Audiences,
-            ["registration"] = user.Registration.ToString(CultureInfo.InvariantCulture),
+            [TokenClaims.Registration] = user.Registration.ToString(CultureInfo.InvariantCulture),
+            [TokenClaims.SecurityStamp] = user.SecurityStamp,
             ["department"] = user.Department?.Name ?? DepartmentFallback,
-            ["roles"] = user.RoleNames.ToArray(),
+            [TokenClaims.Roles] = user.RoleNames.ToArray(),
             ["applications"] = user.ApplicationNames.ToArray(),
         };
 

@@ -26,9 +26,11 @@ public sealed class AuthErrorContractTests
 
     private static AuthController Controller(AccessFixture f, FakeCurrentActor actor) => new(
         new LoginUseCase(f.Users, f.Hasher, f.AccessTokens, f.RefreshTokens, f.Tokens, f.Policy),
-        new RefreshSessionUseCase(f.Tokens, f.Users, f.AccessTokens, f.RefreshTokens, f.Policy),
-        new LogoutUseCase(f.Tokens, actor),
-        new ValidateCredentialsUseCase(f.Users, f.Hasher));
+        new RefreshSessionUseCase(f.Tokens, f.Users, f.AccessTokens, f.RefreshTokens, f.AccessProfiles, f.Policy),
+        new LogoutUseCase(f.Tokens, f.Users, f.AccessProfiles, actor),
+        new ValidateCredentialsUseCase(f.Users, f.Hasher, actor),
+        new GetMyAccessUseCase(f.Users, actor),
+        Microsoft.Extensions.Logging.Abstractions.NullLogger<AuthController>.Instance);
 
     private static async Task<Response> RenderAsync(IActionResult actionResult)
     {
@@ -102,8 +104,9 @@ public sealed class AuthErrorContractTests
     {
         var f = new AccessFixture();
         var target = f.AddUser(12345);
+        var actor = f.AddUser(54321, "other@grupomultilaser.com.br", roles: f.OperatorRole);
 
-        var actionResult = await Controller(f, FakeCurrentActor.Common(userId: 999))
+        var actionResult = await Controller(f, FakeCurrentActor.For(actor))
             .Logout(new LogoutRequest(target.Id), CancellationToken.None);
 
         var response = await RenderAsync(actionResult);

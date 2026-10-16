@@ -74,26 +74,14 @@ public sealed class JwtAccessTokenIssuerTests
 
         Assert.Equal(user.Id.ToString(), root.GetProperty("sub").GetString());
         Assert.Equal("12345", root.GetProperty("registration").GetString());
+        Assert.Equal(user.SecurityStamp, root.GetProperty("sstamp").GetString());
         Assert.Equal("ti", root.GetProperty("department").GetString());
         Assert.Equal("John Doe Smith", root.GetProperty("name").GetString());
         Assert.Equal("access-control", root.GetProperty("iss").GetString());
 
         Assert.Equal(JsonValueKind.Array, root.GetProperty("roles").ValueKind);
-        Assert.Equal(["master", "operator"], root.GetProperty("roles").EnumerateArray().Select(x => x.GetString()));
+        Assert.Equal(["master", "operador"], root.GetProperty("roles").EnumerateArray().Select(x => x.GetString()));
         Assert.Equal(JsonValueKind.Array, root.GetProperty("applications").ValueKind);
         Assert.Equal(["q-zero", "master-data"], root.GetProperty("aud").EnumerateArray().Select(x => x.GetString()));
-    }
-
-    [Fact]
-    public async Task TokenRoles_BecomeRoleClaims_SoAuthorizeWorks()
-    {
-        var token = new JwtAccessTokenIssuer(Options).Issue(UserWithAccess());
-        var validated = await new JsonWebTokenHandler().ValidateTokenAsync(token, SameValidationAsProgram());
-
-        var principal = new ClaimsPrincipal(validated.ClaimsIdentity);
-        await new RolesClaimsTransformation().TransformAsync(principal);
-
-        Assert.True(principal.IsInRole(AuthPolicies.MasterRole));
-        Assert.True(principal.IsInRole("operator"));
     }
 }
