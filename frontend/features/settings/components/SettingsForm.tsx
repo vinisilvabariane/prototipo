@@ -1,15 +1,21 @@
 "use client";
 
 import type { ReactNode } from "react";
+import CheckCircleOutlined from "@mui/icons-material/CheckCircleOutlined";
+import ErrorOutlined from "@mui/icons-material/ErrorOutlined";
+import InfoOutlined from "@mui/icons-material/InfoOutlined";
+import WarningAmber from "@mui/icons-material/WarningAmber";
+import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import Card from "@mui/material/Card";
+import Chip from "@mui/material/Chip";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import Stack from "@mui/material/Stack";
 import Switch from "@mui/material/Switch";
 import ToggleButton from "@mui/material/ToggleButton";
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Typography from "@mui/material/Typography";
+import Panel from "@/components/ui/Panel";
 import { inkSoft, line } from "@/lib/tokens";
 import { DEFAULT_PREFS, resetPrefs, setPref, usePrefs, type Prefs } from "@/lib/prefs/store";
 
@@ -17,15 +23,12 @@ type Choice<T extends string> = { value: T; label: string };
 
 function Section({ title, description, children }: { title: string; description: string; children: ReactNode }) {
   return (
-    <Card sx={{ p: 3 }}>
-      <Typography variant="h6" component="h2">
-        {title}
+    <Panel title={title}>
+      <Typography variant="body2" sx={{ color: inkSoft, mb: 2.5 }}>
+        {description}
       </Typography>
-      <Typography sx={{ color: inkSoft, mt: 0.5 }}>{description}</Typography>
-      <Stack spacing={3} sx={{ mt: 3 }}>
-        {children}
-      </Stack>
-    </Card>
+      <Stack spacing={2.5}>{children}</Stack>
+    </Panel>
   );
 }
 
@@ -75,6 +78,36 @@ function SwitchRow({ label, hint, checked, onChange }: { label: string; hint: st
   );
 }
 
+const COLOR_SAMPLES = [
+  { label: "Erro", color: "error", icon: ErrorOutlined },
+  { label: "Aviso", color: "warning", icon: WarningAmber },
+  { label: "Sucesso", color: "success", icon: CheckCircleOutlined },
+  { label: "Informação", color: "primary", icon: InfoOutlined },
+] as const;
+
+function ColorSample() {
+  return (
+    <Box sx={{ p: 2, border: `1px solid ${line}`, borderRadius: "10px" }}>
+      <Typography variant="overline" sx={{ color: inkSoft }}>
+        Amostra de cores
+      </Typography>
+      <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: "wrap", rowGap: 1 }}>
+        {COLOR_SAMPLES.map(({ label, color, icon: Icon }) => (
+          <Chip key={label} color={color} icon={<Icon />} label={label} />
+        ))}
+        {COLOR_SAMPLES.map(({ label, color }) => (
+          <Chip key={`${label}-outlined`} color={color} variant="outlined" label={label} />
+        ))}
+      </Stack>
+      <Stack spacing={1} sx={{ mt: 1.5 }}>
+        <Alert severity="error">Rejeitado: o lote ficou abaixo da meta.</Alert>
+        <Alert severity="warning">Atenção: a qualificação vence em 7 dias.</Alert>
+        <Alert severity="success">Aprovado: todos os postos críticos estão ocupados.</Alert>
+      </Stack>
+    </Box>
+  );
+}
+
 const SAMPLE =
   "A ordem de produção 48213 foi liberada para a linha 2 às 07:40. O lote de 1.200 peças deve ser concluído até o fim do turno, com inspeção final na expedição.";
 
@@ -83,7 +116,7 @@ export default function SettingsForm() {
   const isDefault = (Object.keys(DEFAULT_PREFS) as (keyof Prefs)[]).every((key) => key === "theme" || prefs[key] === DEFAULT_PREFS[key]);
 
   return (
-    <Stack spacing={3}>
+    <Stack spacing={2.5}>
       <Section title="Leitura" description="Ajuste o texto para ler com conforto. A amostra abaixo muda na hora.">
         <ChoiceRow
           label="Tamanho do texto"
@@ -128,7 +161,7 @@ export default function SettingsForm() {
         />
         <ChoiceRow
           label="Daltonismo"
-          hint="Ajusta as cores de erro, aviso e sucesso para o tipo de visão. Ícones e textos continuam reforçando o significado."
+          hint="Ajusta as cores de erro, aviso e sucesso para o tipo de visão. A amostra abaixo muda na hora; ícones e textos continuam reforçando o significado."
           value={prefs.colorVision}
           onChange={(next) => setPref("colorVision", next)}
           options={[
@@ -139,6 +172,7 @@ export default function SettingsForm() {
             { value: "achromatopsia", label: "Acromatopsia" },
           ]}
         />
+        <ColorSample />
         <Typography variant="body2" sx={{ color: inkSoft, mt: -2 }}>
           Protanopia (sem vermelho): laranja claro, amarelo e ciano. Deuteranopia (sem verde): laranja, amarelo e azul-esverdeado. Tritanopia (sem azul): vermelho, ciano e cinza-escuro. Acromatopsia (sem cor): só tons de cinza.
         </Typography>

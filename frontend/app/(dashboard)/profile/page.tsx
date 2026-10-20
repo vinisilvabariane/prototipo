@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Avatar from "@mui/material/Avatar";
 import Box from "@mui/material/Box";
-import Card from "@mui/material/Card";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
+import EmptyState from "@/components/ui/EmptyState";
 import PageError from "@/components/ui/PageError";
+import Panel from "@/components/ui/Panel";
 import { userService } from "@/features/users/services/UserService";
 import { readSessionUser } from "@/lib/http/session";
 import { all } from "@/lib/result";
@@ -36,7 +37,7 @@ export default async function ProfilePage() {
   const { user: person, roles: assigned } = data.value;
 
   return (
-    <Stack spacing={4} sx={{ maxWidth: 760 }}>
+    <Stack spacing={2.5} sx={{ maxWidth: 820 }}>
       <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
         <Avatar sx={{ width: 56, height: 56, fontSize: "1.2rem", fontWeight: 700, bgcolor: brandSoft, color: brandDeep }}>
           {initialsOf(person.name)}
@@ -45,36 +46,28 @@ export default async function ProfilePage() {
           <Typography variant="h4" component="h1">
             {person.name}
           </Typography>
-          <Typography sx={{ color: inkSoft, mt: 0.5 }}>
+          <Typography variant="body2" sx={{ color: inkSoft, mt: 0.25 }}>
             Matrícula{" "}
-            <Box component="span" sx={{ fontVariantNumeric: "tabular-nums", color: "text.primary" }}>
+            <Box component="span" sx={{ fontVariantNumeric: "tabular-nums", color: "text.primary", fontWeight: 600 }}>
               {person.registration}
             </Box>
           </Typography>
         </Box>
       </Box>
 
-      <Box sx={{ display: "grid", gap: 3, gridTemplateColumns: { xs: "minmax(0, 1fr)", md: "repeat(2, minmax(0, 1fr))" }, alignItems: "start" }}>
-        <Card sx={{ p: 3 }}>
-          <Typography variant="overline" component="h2" sx={{ color: inkSoft }}>
-            Dados
-          </Typography>
-          <Box sx={{ mt: 1 }}>
-            <Field label="E-mail">{person.email ?? "—"}</Field>
-            <Field label="Departamento">{person.department}</Field>
-          </Box>
-        </Card>
+      <Box sx={{ display: "grid", gap: 2.5, gridTemplateColumns: { xs: "minmax(0, 1fr)", md: "repeat(2, minmax(0, 1fr))" }, alignItems: "start" }}>
+        <Panel title="Dados">
+          <Field label="E-mail">{person.email ?? "—"}</Field>
+          <Field label="Departamento">{person.department}</Field>
+        </Panel>
 
-        <Card sx={{ p: 3 }}>
-          <Typography variant="overline" component="h2" sx={{ color: inkSoft }}>
-            Perfis ({assigned.length})
-          </Typography>
+        <Panel title="Perfis" count={assigned.length}>
           {assigned.length === 0 ? (
-            <Typography sx={{ mt: 2, color: inkSoft }}>Você ainda não tem nenhum perfil atribuído.</Typography>
+            <EmptyState compact title="Nenhum perfil atribuído" hint="Peça a um administrador para atribuir um perfil a você." />
           ) : (
-            <Box component="ul" sx={{ listStyle: "none", m: 0, mt: 1, p: 0 }}>
+            <Box component="ul" sx={{ listStyle: "none", m: 0, p: 0 }}>
               {assigned.map((role) => (
-                <Box key={role.id} component="li" sx={{ py: 1.5, borderBottom: `1px solid ${line}`, "&:last-of-type": { borderBottom: 0 } }}>
+                <Box key={role.id} component="li" sx={{ py: 1, borderBottom: `1px solid ${line}`, "&:last-of-type": { borderBottom: 0 } }}>
                   <Typography sx={{ fontWeight: 600 }}>{role.name}</Typography>
                   <Typography variant="body2" sx={{ color: inkSoft }}>
                     {role.description}
@@ -83,7 +76,7 @@ export default async function ProfilePage() {
               ))}
             </Box>
           )}
-        </Card>
+        </Panel>
       </Box>
 
       <Typography variant="body2" sx={{ color: inkSoft }}>

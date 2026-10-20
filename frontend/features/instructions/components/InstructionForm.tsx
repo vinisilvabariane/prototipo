@@ -4,7 +4,6 @@ import { startTransition, useActionState, useEffect, useRef, useState, type Form
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import Card from "@mui/material/Card";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import Radio from "@mui/material/Radio";
 import RadioGroup from "@mui/material/RadioGroup";
@@ -12,6 +11,7 @@ import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import ErrorAlert from "@/components/ui/ErrorAlert";
+import Panel from "@/components/ui/Panel";
 import { formatBytes } from "@/lib/format";
 import type { Result } from "@/lib/result";
 import { inkSoft } from "@/lib/tokens";
@@ -162,7 +162,7 @@ export default function InstructionForm({ instruction, suggestedCode }: Props) {
 
   return (
     <Box component="form" onSubmit={onSubmit} noValidate>
-      <Stack spacing={3}>
+      <Stack spacing={2.5}>
         {(problems.length > 0 || (result && !result.ok)) && (
           <Stack spacing={1.5}>
             {problems.length > 0 && (
@@ -178,47 +178,36 @@ export default function InstructionForm({ instruction, suggestedCode }: Props) {
           </Stack>
         )}
 
-        <Card sx={{ p: 3 }}>
-          <Typography variant="overline" component="h2" sx={{ color: inkSoft }}>
-            Informações
-          </Typography>
-          <Box sx={{ display: "grid", gap: 2, mt: 1.5, gridTemplateColumns: { xs: "minmax(0, 1fr)", md: "repeat(2, minmax(0, 1fr))" } }}>
+        <Panel title="Informações">
+          <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "minmax(0, 1fr)", md: "repeat(2, minmax(0, 1fr))" } }}>
             <TextField label="Código" name="code" defaultValue={instruction?.code ?? suggestedCode} slotProps={{ htmlInput: { readOnly: true } }} helperText="Gerado pelo sistema e único por instrução." />
             <TextField label="Nº do documento" name="documentNumber" defaultValue={instruction?.documentNumber} slotProps={{ htmlInput: { maxLength: FIELD_LIMITS.documentNumber } }} />
             <TextField label="Título" name="title" defaultValue={instruction?.title} slotProps={{ htmlInput: { maxLength: FIELD_LIMITS.title } }} sx={{ gridColumn: { md: "1 / -1" } }} />
-            <TextField label="Produto" name="product" defaultValue={instruction?.product} slotProps={{ htmlInput: { maxLength: FIELD_LIMITS.product } }} />
-            <Box />
-            <TextField label="Elaborado por" name="preparedBy" defaultValue={instruction?.preparedBy} slotProps={{ htmlInput: { maxLength: FIELD_LIMITS.preparedBy } }} />
-            <TextField label="Aprovado por" name="approvedBy" defaultValue={instruction?.approvedBy} slotProps={{ htmlInput: { maxLength: FIELD_LIMITS.approvedBy } }} />
+            <Box sx={{ display: "grid", gap: 2, gridColumn: { md: "1 / -1" }, gridTemplateColumns: { xs: "minmax(0, 1fr)", md: "repeat(3, minmax(0, 1fr))" } }}>
+              <TextField label="Produto" name="product" defaultValue={instruction?.product} slotProps={{ htmlInput: { maxLength: FIELD_LIMITS.product } }} />
+              <TextField label="Elaborado por" name="preparedBy" defaultValue={instruction?.preparedBy} slotProps={{ htmlInput: { maxLength: FIELD_LIMITS.preparedBy } }} />
+              <TextField label="Aprovado por" name="approvedBy" defaultValue={instruction?.approvedBy} slotProps={{ htmlInput: { maxLength: FIELD_LIMITS.approvedBy } }} />
+            </Box>
           </Box>
-        </Card>
+        </Panel>
 
-        <Card sx={{ p: 3 }}>
-          <Typography variant="overline" component="h2" sx={{ color: inkSoft }}>
-            Especificações
-          </Typography>
-          <Stack spacing={2} sx={{ mt: 1.5 }}>
+        <Panel title="Especificações">
+          <Stack spacing={2}>
             <TextField label="EPI obrigatório" name="requiredPpe" defaultValue={instruction?.requiredPpe} placeholder="Ex.: luvas, óculos de proteção" multiline minRows={2} slotProps={{ htmlInput: { maxLength: FIELD_LIMITS.requiredPpe } }} />
             <TextField label="Especificações de processo" name="processSpecifications" defaultValue={instruction?.processSpecifications} multiline minRows={3} slotProps={{ htmlInput: { maxLength: FIELD_LIMITS.processSpecifications } }} />
             <TextField label="Observações" name="notes" defaultValue={instruction?.notes ?? ""} multiline minRows={2} slotProps={{ htmlInput: { maxLength: FIELD_LIMITS.notes } }} helperText="Aparecem em destaque no PDF gerado." />
           </Stack>
-        </Card>
+        </Panel>
 
-        <Card sx={{ p: 3 }}>
-          <Typography variant="overline" component="h2" sx={{ color: inkSoft }}>
-            Passos ({steps.length})
-          </Typography>
-          <Typography variant="body2" sx={{ color: inkSoft, mt: 0.5, mb: 2 }}>
+        <Panel title="Passos" count={steps.length}>
+          <Typography variant="body2" sx={{ color: inkSoft, mb: 2 }}>
             Cada passo tem uma instrução escrita e, se ajudar, uma imagem (PNG, JPEG, GIF ou WebP de até {formatBytes(MAX_IMAGE_BYTES)}).
           </Typography>
           <StepsEditor steps={steps} onChange={setSteps} nextKey={nextKey} track={track} />
-        </Card>
+        </Panel>
 
-        <Card sx={{ p: 3 }}>
-          <Typography variant="overline" component="h2" sx={{ color: inkSoft }}>
-            Documento PDF
-          </Typography>
-          <RadioGroup value={mode} onChange={(_, next) => setMode(next as PdfMode)} sx={{ mt: 1 }}>
+        <Panel title="Documento PDF">
+          <RadioGroup value={mode} onChange={(_, next) => setMode(next as PdfMode)}>
             {editing && (
               <FormControlLabel
                 value="keep"
@@ -247,7 +236,7 @@ export default function InstructionForm({ instruction, suggestedCode }: Props) {
               O PDF será gerado de novo com os dados e passos desta tela e substituirá o atual.
             </Typography>
           )}
-        </Card>
+        </Panel>
 
         <Stack direction="row" spacing={1.5}>
           <Button type="submit" variant="contained" disabled={busy}>

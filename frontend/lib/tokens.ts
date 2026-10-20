@@ -22,15 +22,15 @@ export type ThemeDefinition = {
   hint: string;
   base: ThemeBase;
   tokens: SchemeTokens;
-  semantic: { error: string; warning: string };
+  semantic: { error: string; warning: string; success: string };
 };
 
 export const THEME_NAMES = ["graphite", "ocean", "noir", "vivid", "cream", "vulcan"] as const;
 export type ThemeName = (typeof THEME_NAMES)[number];
 export const DEFAULT_THEME: ThemeName = "graphite";
 
-const lightSemantic = { error: "#C62E20", warning: "#9A6700" };
-const darkSemantic = { error: "#F2645A", warning: "#E0A800" };
+const lightSemantic = { error: "#C62E20", warning: "#9A6700", success: "#1E7B3E" };
+const darkSemantic = { error: "#F2645A", warning: "#E0A800", success: "#4CC27A" };
 
 export const themes: Record<ThemeName, ThemeDefinition> = {
   graphite: {
@@ -147,7 +147,7 @@ export const themes: Record<ThemeName, ThemeDefinition> = {
     label: "Vulcan",
     hint: "Escuro, com vermelho vivo",
     base: "dark",
-    semantic: { error: "#FFB4A8", warning: "#E0A800" },
+    semantic: { error: "#FFB4A8", warning: "#E0A800", success: "#4CC27A" },
     tokens: {
       ink: "#F7ECE9",
       inkSoft: "#B59C97",

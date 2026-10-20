@@ -11,7 +11,7 @@ export default function Field({ label, children }: { label: string; children: Re
         gridTemplateColumns: { xs: "minmax(0, 1fr)", sm: "minmax(110px, 34%) minmax(0, 1fr)" },
         columnGap: 2,
         rowGap: 0.25,
-        py: 1,
+        py: 0.75,
         borderBottom: `1px solid ${line}`,
         "&:last-of-type": { borderBottom: 0 },
       }}

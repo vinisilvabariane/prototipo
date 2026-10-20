@@ -1,19 +1,15 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import ArrowBack from "@mui/icons-material/ArrowBack";
-import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
 import Stack from "@mui/material/Stack";
-import Typography from "@mui/material/Typography";
 import ConfirmDeleteButton from "@/components/ui/ConfirmDeleteButton";
 import PageError from "@/components/ui/PageError";
+import PageHeader from "@/components/ui/PageHeader";
 import { deleteLayout } from "@/features/production/actions/layoutActions";
 import LayoutEditor from "@/features/production/editor/LayoutEditor";
 import { formatDateTime } from "@/features/production/format";
 import { productionService } from "@/features/production/services/ProductionService";
 import StartRunButton from "@/features/production/runs/StartRunButton";
 import { all } from "@/lib/result";
-import { inkSoft } from "@/lib/tokens";
 
 function parseId(value: string) {
   const id = Number(value);
@@ -43,29 +39,19 @@ export default async function LayoutPage({ params }: PageProps<"/production/layo
   const { layout } = loaded.value;
 
   return (
-    <Stack spacing={3}>
-      <Box>
-        <Button href="/production/layouts" size="small" startIcon={<ArrowBack fontSize="small" />} sx={{ color: inkSoft, ml: -1 }}>
-          Layouts
-        </Button>
-        <Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ mt: 1, justifyContent: "space-between", alignItems: { md: "flex-start" } }}>
-          <Box sx={{ minWidth: 0 }}>
-            <Typography variant="overline" component="p" sx={{ color: inkSoft }}>
-              {layout.lineName} · {layout.shiftName}
-            </Typography>
-            <Typography variant="h4" component="h1" sx={{ overflowWrap: "anywhere" }}>
-              {layout.productCode} · {layout.productName}
-            </Typography>
-            <Typography variant="body2" sx={{ color: inkSoft, mt: 0.5 }}>
-              Última alteração de {layout.updatedBy || "—"} em {formatDateTime(layout.updatedAt)}
-            </Typography>
-          </Box>
-          <Stack direction="row" spacing={1} sx={{ alignItems: "flex-start" }}>
+    <Stack spacing={2.5}>
+      <PageHeader
+        back={{ href: "/production/layouts", label: "Layouts" }}
+        eyebrow={`${layout.lineName} · ${layout.shiftName}`}
+        title={`${layout.productCode} · ${layout.productName}`}
+        description={`Última alteração de ${layout.updatedBy || "—"} em ${formatDateTime(layout.updatedAt)}`}
+        actions={
+          <>
             <StartRunButton layoutId={layout.id} variant="outlined" label="Preparar produção" />
             {layout.canManage && <ConfirmDeleteButton name="este layout" action={deleteLayout.bind(null, layout.id)} />}
-          </Stack>
-        </Stack>
-      </Box>
+          </>
+        }
+      />
 
       <LayoutEditor layout={layout} lines={loaded.value.lines} products={loaded.value.products} shifts={loaded.value.shifts} />
     </Stack>

@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
 import Stack from "@mui/material/Stack";
-import Typography from "@mui/material/Typography";
 import PageError from "@/components/ui/PageError";
+import PageHeader from "@/components/ui/PageHeader";
 import { departmentService } from "@/features/departments/services/DepartmentService";
 import OrgChartView from "@/features/org-chart/components/OrgChartView";
 import { orgChartService } from "@/features/org-chart/services/OrgChartService";
 import { all, ok } from "@/lib/result";
-import { inkSoft } from "@/lib/tokens";
 
 export const metadata: Metadata = {
   title: "Organograma",
@@ -26,13 +25,8 @@ export default async function OrgChartPage() {
   if (!data.ok) return <PageError title="Organograma" error={data.error} retryHref="/org-chart" />;
 
   return (
-    <Stack spacing={3}>
-      <div>
-        <Typography variant="h4" component="h1">
-          Organograma
-        </Typography>
-        <Typography sx={{ mt: 0.75, color: inkSoft }}>Quem responde a quem, e quais cargos estão vagos.</Typography>
-      </div>
+    <Stack spacing={2.5}>
+      <PageHeader title="Organograma" description="Quem responde a quem, e quais cargos estão vagos." />
       <OrgChartView chart={chart.value} departments={data.value.departments} users={data.value.users} />
     </Stack>
   );

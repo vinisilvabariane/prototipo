@@ -3,9 +3,9 @@
 import { startTransition, useActionState, type FormEvent } from "react";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import Card from "@mui/material/Card";
 import Stack from "@mui/material/Stack";
 import ErrorAlert from "@/components/ui/ErrorAlert";
+import Panel from "@/components/ui/Panel";
 import type { Result } from "@/lib/result";
 import { saveSupplier } from "../actions/supplierActions";
 import type { SupplierDetail } from "../types";
@@ -25,11 +25,11 @@ export default function SupplierForm({ supplier }: { supplier?: SupplierDetail }
 
   return (
     <Box component="form" onSubmit={handleSubmit}>
-      <Stack spacing={3}>
+      <Stack spacing={2.5}>
         {result && !result.ok && <ErrorAlert error={result.error} />}
-        <Card sx={{ p: 3 }}>
+        <Panel title="Dados do fornecedor">
           <SupplierFields supplier={supplier} />
-        </Card>
+        </Panel>
         <Stack direction="row" spacing={1} sx={{ justifyContent: "flex-end" }}>
           <Button href={supplier ? `/suppliers/${supplier.id}` : "/suppliers"}>Cancelar</Button>
           <Button type="submit" variant="contained" disabled={pending}>

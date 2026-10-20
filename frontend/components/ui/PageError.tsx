@@ -1,12 +1,12 @@
 import Stack from "@mui/material/Stack";
-import Typography from "@mui/material/Typography";
 import type { AppError } from "@/lib/result";
 import ErrorAlert from "./ErrorAlert";
+import PageHeader from "./PageHeader";
 
 export default function PageError({ title, error, retryHref }: { title: string; error: AppError; retryHref: string }) {
   return (
-    <Stack spacing={3}>
-      <Typography variant="h4">{title}</Typography>
+    <Stack spacing={2.5}>
+      <PageHeader title={title} />
       <ErrorAlert error={error} retryHref={retryHref} />
     </Stack>
   );

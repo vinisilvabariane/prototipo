@@ -322,7 +322,7 @@ export function createProductionMock(users) {
     return null;
   };
 
-  return function handle({ req, res, url, segments, actor, json, send, fail }) {
+  function handle({ req, res, url, segments, actor, json, send, fail }) {
     const [, , , a, b, c, d, e] = segments;
     const full = actor !== 3;
     const perms = { manage: full, supervise: full, record: true };
@@ -620,5 +620,8 @@ export function createProductionMock(users) {
     }
 
     return fail(res, 404, "Rota inexistente", url.pathname);
-  };
+  }
+
+  handle.data = { runs, lines, products, shifts };
+  return handle;
 }

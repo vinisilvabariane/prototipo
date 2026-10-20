@@ -1,28 +1,26 @@
 import type { Metadata } from "next";
-import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import Card from "@mui/material/Card";
 import Stack from "@mui/material/Stack";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableHead from "@mui/material/TableHead";
-import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
+import DataTable from "@/components/ui/DataTable";
+import FilterBar from "@/components/ui/FilterBar";
+import ListCard from "@/components/ui/ListCard";
 import PageError from "@/components/ui/PageError";
+import PageHeader from "@/components/ui/PageHeader";
 import Pager from "@/components/ui/Pager";
 import TextLink from "@/components/ui/TextLink";
 import { CriticalityChip, QualificationChip } from "@/features/suppliers/components/SupplierBadges";
-import SupplierFilters from "@/features/suppliers/components/SupplierFilters";
 import { formatDay, formatScore } from "@/features/suppliers/format";
 import {
   CRITICALITIES,
+  CRITICALITY_LABELS,
   MULTI_BRANCHES,
   MULTI_BRANCH_LABELS,
   ORIGINS,
   ORIGIN_LABELS,
   QUALIFICATION_KIND_LABELS,
   STATUS_FILTERS,
+  STATUS_FILTER_LABELS,
 } from "@/features/suppliers/labels";
 import { supplierService } from "@/features/suppliers/services/SupplierService";
 import { inkSoft } from "@/lib/tokens";
@@ -49,87 +47,80 @@ export default async function SuppliersPage({ searchParams }: PageProps<"/suppli
   if (!result.ok) return <PageError title="Fornecedores" error={result.error} retryHref="/suppliers" />;
   const list = result.value;
 
+  const filtered = Boolean(search || origin || multiBranch || criticality || status);
+
   return (
-    <Stack spacing={3}>
-      <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center" }}>
-        <Typography variant="h4" component="h1">
-          Fornecedores
-        </Typography>
-        {list.canRegister && (
-          <Button href="/suppliers/new" variant="contained">
-            Novo fornecedor
-          </Button>
-        )}
-      </Stack>
+    <Stack spacing={2.5}>
+      <PageHeader
+        title="Fornecedores"
+        description="Cadastro, qualificação e documentos de cada fornecedor."
+        actions={
+          list.canRegister && (
+            <Button href="/suppliers/new" variant="contained">
+              Novo fornecedor
+            </Button>
+          )
+        }
+      />
 
-      <SupplierFilters values={{ search, origin: origin ?? "", multiBranch: multiBranch ?? "", criticality: criticality ?? "", status: status ?? "" }} />
-
-      <Card variant="outlined">
-        <Box sx={{ overflowX: "auto" }}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Código SAP</TableCell>
-                <TableCell>Fornecedor</TableCell>
-                <TableCell>Filial Multi</TableCell>
-                <TableCell>Origem</TableCell>
-                <TableCell>Criticidade</TableCell>
-                <TableCell>Qualificação</TableCell>
-                <TableCell>Vencimento</TableCell>
-                <TableCell align="right">Ações</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {list.items.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={8} sx={{ color: inkSoft, textAlign: "center", py: 4 }}>
-                    Nenhum fornecedor encontrado.
-                  </TableCell>
-                </TableRow>
-              )}
-              {list.items.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell sx={{ whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>{item.sapCode}</TableCell>
-                  <TableCell sx={{ maxWidth: 360 }}>
-                    <TextLink href={`/suppliers/${item.id}`}>{item.name}</TextLink>
-                    <Typography component="span" variant="body2" sx={{ color: inkSoft, ml: 1 }}>
-                      {item.branch}
+      <ListCard
+        toolbar={
+          <FilterBar
+            basePath="/suppliers"
+            values={{ search, status: status ?? "", multiBranch: multiBranch ?? "", criticality: criticality ?? "", origin: origin ?? "" }}
+            fields={[
+              { type: "search", name: "search", label: "Buscar por nome, código ou CNPJ", width: 300 },
+              { type: "select", name: "status", label: "Status", options: STATUS_FILTERS.map((item) => ({ value: item, label: STATUS_FILTER_LABELS[item] })) },
+              { type: "select", name: "multiBranch", label: "Filial Multi", options: MULTI_BRANCHES.map((item) => ({ value: item, label: MULTI_BRANCH_LABELS[item] })) },
+              { type: "select", name: "criticality", label: "Criticidade", width: 150, options: CRITICALITIES.map((item) => ({ value: item, label: CRITICALITY_LABELS[item] })) },
+              { type: "select", name: "origin", label: "Origem", width: 150, options: ORIGINS.map((item) => ({ value: item, label: ORIGIN_LABELS[item] })) },
+            ]}
+          />
+        }
+        footer={<Pager basePath="/suppliers" page={list.page} pageSize={list.pageSize} totalCount={list.totalCount} params={{ search, origin, multiBranch, criticality, status }} />}
+      >
+        <DataTable
+          rows={list.items}
+          rowKey={(item) => item.id}
+          emptyTitle={filtered ? "Nenhum fornecedor encontrado" : "Nenhum fornecedor cadastrado"}
+          emptyHint={filtered ? "Ajuste ou limpe os filtros." : list.canRegister ? "Cadastre o primeiro em Novo fornecedor." : undefined}
+          columns={[
+            { key: "sapCode", header: "Código SAP", fit: true, numeric: true, align: "left", render: (item) => item.sapCode },
+            {
+              key: "name",
+              header: "Fornecedor",
+              wrap: true,
+              render: (item) => (
+                <>
+                  <TextLink href={`/suppliers/${item.id}`}>{item.name}</TextLink>
+                  <Typography component="span" variant="body2" sx={{ color: inkSoft, ml: 1 }}>
+                    {item.branch}
+                  </Typography>
+                </>
+              ),
+            },
+            { key: "multiBranch", header: "Filial Multi", fit: true, hideBelow: "md", render: (item) => MULTI_BRANCH_LABELS[item.multiBranch] },
+            { key: "origin", header: "Origem", fit: true, hideBelow: "lg", render: (item) => ORIGIN_LABELS[item.origin] },
+            { key: "criticality", header: "Criticidade", fit: true, render: (item) => <CriticalityChip criticality={item.criticality} /> },
+            {
+              key: "qualification",
+              header: "Qualificação",
+              fit: true,
+              render: (item) => (
+                <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+                  <QualificationChip qualification={item.qualification} />
+                  {item.qualification && (
+                    <Typography variant="body2" sx={{ color: inkSoft, display: { xs: "none", lg: "block" } }}>
+                      {QUALIFICATION_KIND_LABELS[item.qualification.kind]} · {formatScore(item.qualification.score)}
                     </Typography>
-                  </TableCell>
-                  <TableCell>{MULTI_BRANCH_LABELS[item.multiBranch]}</TableCell>
-                  <TableCell>{ORIGIN_LABELS[item.origin]}</TableCell>
-                  <TableCell>
-                    <CriticalityChip criticality={item.criticality} />
-                  </TableCell>
-                  <TableCell>
-                    <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-                      <QualificationChip qualification={item.qualification} />
-                      {item.qualification && (
-                        <Typography variant="body2" sx={{ color: inkSoft, whiteSpace: "nowrap" }}>
-                          {QUALIFICATION_KIND_LABELS[item.qualification.kind]} · {formatScore(item.qualification.score)}
-                        </Typography>
-                      )}
-                    </Stack>
-                  </TableCell>
-                  <TableCell sx={{ whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>{formatDay(item.qualification?.expiresOn)}</TableCell>
-                  <TableCell align="right">
-                    <Button size="small" href={`/suppliers/${item.id}`}>
-                      Detalhes
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Box>
-        <Pager
-          basePath="/suppliers"
-          page={list.page}
-          pageSize={list.pageSize}
-          totalCount={list.totalCount}
-          params={{ search, origin, multiBranch, criticality, status }}
+                  )}
+                </Stack>
+              ),
+            },
+            { key: "expiresOn", header: "Vencimento", fit: true, numeric: true, align: "left", render: (item) => formatDay(item.qualification?.expiresOn) },
+          ]}
         />
-      </Card>
+      </ListCard>
     </Stack>
   );
 }

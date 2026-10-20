@@ -12,7 +12,7 @@ import {
 
 const palette = (scheme: SchemeTokens, semantic: ThemeDefinition["semantic"]) => ({
   primary: { main: scheme.brand, dark: scheme.brandDeep, contrastText: scheme.onInk },
-  success: { main: scheme.brand },
+  success: { main: semantic.success },
   info: { main: scheme.brand },
   warning: { main: semantic.warning },
   error: { main: semantic.error },
@@ -21,7 +21,7 @@ const palette = (scheme: SchemeTokens, semantic: ThemeDefinition["semantic"]) =>
   divider: scheme.line,
 });
 
-const semanticFor = (name: "error" | "warning", main: string, base: ThemeDefinition["base"], canvas: string): Record<string, string> => {
+const semanticFor = (name: "error" | "warning" | "success", main: string, base: ThemeDefinition["base"], canvas: string): Record<string, string> => {
   const dark = base === "dark";
   return {
     [`--mui-palette-${name}-main`]: main,
@@ -40,12 +40,12 @@ const themeVariables = ({ tokens, semantic, base }: ThemeDefinition): Record<str
   ...cssVariables(tokens),
   ...semanticFor("error", semantic.error, base, tokens.canvas),
   ...semanticFor("warning", semantic.warning, base, tokens.canvas),
+  ...semanticFor("success", semantic.success, base, tokens.canvas),
   "--mui-palette-primary-main": tokens.brand,
   "--mui-palette-primary-mainChannel": channel(tokens.brand),
   "--mui-palette-primary-dark": tokens.brandDeep,
   "--mui-palette-primary-light": tokens.brand,
   "--mui-palette-primary-contrastText": tokens.onInk,
-  "--mui-palette-success-main": tokens.brand,
   "--mui-palette-info-main": tokens.brand,
   "--mui-palette-background-default": tokens.canvas,
   "--mui-palette-background-paper": tokens.surface,
@@ -136,6 +136,23 @@ const colorVisionSets: Record<string, { light: SemanticSet; dark: SemanticSet }>
   },
 };
 
+const grayBrand = (light: boolean): Record<string, string> => {
+  const [main, deep, wash, soft, contrast] = light ? ["#3A3A3A", "#111111", "#E8E8E8", "#D4D4D4", "#FFFFFF"] : ["#D0D0D0", "#F0F0F0", "#2A2A2A", "#3A3A3A", "#000000"];
+
+  return {
+    "--mo-brand": main,
+    "--mo-brand-deep": deep,
+    "--mo-brand-wash": wash,
+    "--mo-brand-soft": soft,
+    "--mui-palette-primary-main": main,
+    "--mui-palette-primary-mainChannel": channel(main),
+    "--mui-palette-primary-dark": deep,
+    "--mui-palette-primary-light": main,
+    "--mui-palette-primary-contrastText": contrast,
+    "--mui-palette-info-main": main,
+  };
+};
+
 const semanticVariables = (set: SemanticSet): Record<string, string> =>
   Object.fromEntries(
     Object.entries(set).flatMap(([name, [main, lightTone, dark, contrast, alertText, alertBg]]) => [
@@ -160,8 +177,8 @@ const globalVariables: Record<string, Record<string, string>> = {
   'html:root[data-contrast="high"] a:not([role="button"])': { textDecoration: "underline" },
   ...Object.fromEntries(
     Object.entries(colorVisionSets).flatMap(([kind, sets]) => [
-      [`html:root[data-color-vision="${kind}"]`, semanticVariables(sets.light)],
-      [`html:root[data-mui-color-scheme="dark"][data-color-vision="${kind}"]`, semanticVariables(sets.dark)],
+      [`html:root[data-color-vision="${kind}"]`, { ...semanticVariables(sets.light), ...(kind === "achromatopsia" ? grayBrand(true) : undefined) }],
+      [`html:root[data-mui-color-scheme="dark"][data-color-vision="${kind}"]`, { ...semanticVariables(sets.dark), ...(kind === "achromatopsia" ? grayBrand(false) : undefined) }],
     ]),
   ),
 };
@@ -205,7 +222,7 @@ export const theme = createTheme({
     },
     MuiTableCell: {
       styleOverrides: {
-        root: { padding: "10px 12px", verticalAlign: "middle", "&:first-of-type": { paddingLeft: 20 }, "&:last-of-type": { paddingRight: 20 } },
+        root: { padding: "10px 14px", verticalAlign: "middle", "&:first-of-type": { paddingLeft: 20 }, "&:last-of-type": { paddingRight: 20 } },
         head: {
           fontWeight: 600,
           fontSize: "0.7rem",
@@ -213,8 +230,9 @@ export const theme = createTheme({
           textTransform: "uppercase",
           color: inkSoft,
           whiteSpace: "nowrap",
-          paddingTop: 12,
-          paddingBottom: 12,
+          paddingTop: 10,
+          paddingBottom: 10,
+          backgroundColor: "color-mix(in srgb, var(--mui-palette-text-primary) 3%, transparent)",
         },
       },
     },

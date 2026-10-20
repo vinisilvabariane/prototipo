@@ -1,22 +1,16 @@
 import type { Metadata } from "next";
-import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
-import Card from "@mui/material/Card";
 import Stack from "@mui/material/Stack";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableHead from "@mui/material/TableHead";
-import TableRow from "@mui/material/TableRow";
-import Typography from "@mui/material/Typography";
+import DataTable from "@/components/ui/DataTable";
+import FilterBar from "@/components/ui/FilterBar";
 import FormDialog from "@/components/ui/FormDialog";
+import ListCard from "@/components/ui/ListCard";
 import PageError from "@/components/ui/PageError";
+import PageHeader from "@/components/ui/PageHeader";
 import Pager from "@/components/ui/Pager";
 import TextLink from "@/components/ui/TextLink";
 import { createWorkflow } from "@/features/workflows/actions/workflowActions";
 import { CategoryChip, DueDate, PriorityChip, StatusChip } from "@/features/workflows/components/WorkflowBadges";
 import NewWorkflowFields from "@/features/workflows/components/NewWorkflowFields";
-import WorkflowFilters from "@/features/workflows/components/WorkflowFilters";
 import WorkflowStats from "@/features/workflows/components/WorkflowStats";
 import { excerpt, formatDateTime } from "@/features/workflows/format";
 import { FILTER_LABELS } from "@/features/workflows/labels";
@@ -49,80 +43,48 @@ export default async function WorkflowsPage({ searchParams }: PageProps<"/workfl
   const { list: workflows, stats: totals, users: people } = data.value;
 
   return (
-    <Stack spacing={3}>
-      <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center" }}>
-        <Typography variant="h4" component="h1">
-          Workflows
-        </Typography>
-        <FormDialog title="Novo workflow" trigger="Novo workflow" submitLabel="Criar workflow" maxWidth="sm" action={createWorkflow}>
-          <NewWorkflowFields users={people} />
-        </FormDialog>
-      </Stack>
+    <Stack spacing={2.5}>
+      <PageHeader
+        title="Workflows"
+        description="Fluxos de aprovação com responsáveis, justificativas e histórico."
+        actions={
+          <FormDialog title="Novo workflow" trigger="Novo workflow" submitLabel="Criar workflow" maxWidth="sm" action={createWorkflow}>
+            <NewWorkflowFields users={people} />
+          </FormDialog>
+        }
+      />
 
       <WorkflowStats stats={totals} />
 
-      <WorkflowFilters filter={filter} search={search} />
-
-      <Card variant="outlined">
-        <Box sx={{ overflowX: "auto" }}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Título</TableCell>
-                <TableCell>Descrição</TableCell>
-                <TableCell>Prioridade</TableCell>
-                <TableCell>Categoria</TableCell>
-                <TableCell>Prazo</TableCell>
-                <TableCell>Criação</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell align="right">Ações</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {workflows.items.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={8} sx={{ color: inkSoft, textAlign: "center", py: 4 }}>
-                    Nenhum workflow encontrado. Crie um novo ou ajuste os filtros.
-                  </TableCell>
-                </TableRow>
-              )}
-              {workflows.items.map((workflow) => (
-                <TableRow key={workflow.id}>
-                  <TableCell sx={{ maxWidth: 260 }}>
-                    <TextLink href={`/workflows/${workflow.id}`}>{workflow.title}</TextLink>
-                  </TableCell>
-                  <TableCell sx={{ color: inkSoft, maxWidth: 260 }}>{excerpt(workflow.description, 50) || "—"}</TableCell>
-                  <TableCell>
-                    <PriorityChip priority={workflow.priority} />
-                  </TableCell>
-                  <TableCell>
-                    <CategoryChip category={workflow.category} />
-                  </TableCell>
-                  <TableCell>
-                    <DueDate dueDate={workflow.dueDate} closed={workflow.status !== "inProgress"} />
-                  </TableCell>
-                  <TableCell sx={{ fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>{formatDateTime(workflow.createdAt)}</TableCell>
-                  <TableCell>
-                    <StatusChip status={workflow.status} />
-                  </TableCell>
-                  <TableCell align="right">
-                    <Button size="small" href={`/workflows/${workflow.id}`}>
-                      Detalhes
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Box>
-        <Pager
-          basePath="/workflows"
-          page={workflows.page}
-          pageSize={workflows.pageSize}
-          totalCount={workflows.totalCount}
-          params={{ search, filter: filter === "all" ? undefined : filter }}
+      <ListCard
+        toolbar={
+          <FilterBar
+            basePath="/workflows"
+            values={{ search, filter: filter === "all" ? "" : filter }}
+            fields={[
+              { type: "segment", name: "filter", label: "Filtro de workflows", options: FILTERS.map((item) => ({ value: item === "all" ? "" : item, label: FILTER_LABELS[item] })) },
+              { type: "search", name: "search", label: "Buscar por título ou descrição", width: 300 },
+            ]}
+          />
+        }
+        footer={<Pager basePath="/workflows" page={workflows.page} pageSize={workflows.pageSize} totalCount={workflows.totalCount} params={{ search, filter: filter === "all" ? undefined : filter }} />}
+      >
+        <DataTable
+          rows={workflows.items}
+          rowKey={(workflow) => workflow.id}
+          emptyTitle="Nenhum workflow encontrado"
+          emptyHint="Crie um novo em Novo workflow ou ajuste os filtros."
+          columns={[
+            { key: "title", header: "Título", wrap: true, render: (workflow) => <TextLink href={`/workflows/${workflow.id}`}>{workflow.title}</TextLink> },
+            { key: "description", header: "Descrição", hideBelow: "lg", wrap: true, render: (workflow) => <span style={{ color: inkSoft }}>{excerpt(workflow.description, 60) || "—"}</span> },
+            { key: "priority", header: "Prioridade", fit: true, render: (workflow) => <PriorityChip priority={workflow.priority} /> },
+            { key: "category", header: "Categoria", fit: true, hideBelow: "md", render: (workflow) => <CategoryChip category={workflow.category} /> },
+            { key: "dueDate", header: "Prazo", fit: true, numeric: true, align: "left", render: (workflow) => <DueDate dueDate={workflow.dueDate} closed={workflow.status !== "inProgress"} /> },
+            { key: "createdAt", header: "Criação", fit: true, numeric: true, align: "left", hideBelow: "lg", render: (workflow) => formatDateTime(workflow.createdAt) },
+            { key: "status", header: "Status", fit: true, render: (workflow) => <StatusChip status={workflow.status} /> },
+          ]}
         />
-      </Card>
+      </ListCard>
     </Stack>
   );
 }

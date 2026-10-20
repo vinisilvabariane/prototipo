@@ -26,7 +26,7 @@ export default function Header({ user }: { user: Promise<SessionUser | null> }) 
   const pathname = usePathname();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const inAccessModule = accessLinks.some((link) => pathname.startsWith(link.href));
-  const section = pathname.startsWith("/workflows") ? "Workflow" : pathname.startsWith("/org-chart") ? "Organograma" : pathname.startsWith("/instructions") ? "Instruções de trabalho" : pathname.startsWith("/suppliers") ? "Fornecedores" : pathname.startsWith("/production") ? "Produção" : null;
+  const section = pathname.startsWith("/workflows") ? "Workflow" : pathname.startsWith("/org-chart") ? "Organograma" : pathname.startsWith("/instructions") ? "Instruções de trabalho" : pathname.startsWith("/suppliers") ? "Fornecedores" : pathname.startsWith("/production") ? "Produção" : pathname.startsWith("/oee") ? "OEE" : pathname.startsWith("/helpdesk") ? "Help desk" : null;
 
   useEffect(() => {
     function openOnCtrlK(e: KeyboardEvent) {

@@ -15,6 +15,7 @@ import Factory from "@mui/icons-material/Factory";
 import FactCheck from "@mui/icons-material/FactCheck";
 import Handshake from "@mui/icons-material/Handshake";
 import Inventory2 from "@mui/icons-material/Inventory2";
+import SupportAgent from "@mui/icons-material/SupportAgent";
 import LocalShipping from "@mui/icons-material/LocalShipping";
 import ManageAccounts from "@mui/icons-material/ManageAccounts";
 import Moving from "@mui/icons-material/Moving";
@@ -48,6 +49,7 @@ const ICONS = {
   APT: EditNote,
   LIN: PrecisionManufacturing,
   OEE: Speed,
+  HLP: SupportAgent,
   FOR: Handshake,
   INS: FactCheck,
   NCO: ReportProblem,

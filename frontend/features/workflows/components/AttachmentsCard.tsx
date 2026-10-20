@@ -7,8 +7,9 @@ import PictureAsPdf from "@mui/icons-material/PictureAsPdf";
 import TableChart from "@mui/icons-material/TableChart";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import Card from "@mui/material/Card";
 import Typography from "@mui/material/Typography";
+import EmptyState from "@/components/ui/EmptyState";
+import Panel from "@/components/ui/Panel";
 import { inkSoft, line } from "@/lib/tokens";
 import { formatBytes, formatDateTime } from "../format";
 import type { WorkflowAttachment } from "../types";
@@ -25,20 +26,16 @@ function iconFor(contentType: string): ElementType {
 
 export default function AttachmentsCard({ workflowId, attachments }: { workflowId: number; attachments: WorkflowAttachment[] }) {
   return (
-    <Card sx={{ p: 3 }}>
-      <Typography variant="overline" component="h2" sx={{ color: inkSoft }}>
-        Anexos ({attachments.length})
-      </Typography>
-
+    <Panel title="Anexos" count={attachments.length}>
       {attachments.length === 0 ? (
-        <Typography sx={{ mt: 2, color: inkSoft }}>Este workflow não tem anexos.</Typography>
+        <EmptyState compact title="Sem anexos" hint="Este workflow não tem arquivos anexados." />
       ) : (
-        <Box sx={{ display: "grid", gap: 2, mt: 2, gridTemplateColumns: { xs: "minmax(0, 1fr)", sm: "repeat(2, minmax(0, 1fr))", lg: "repeat(3, minmax(0, 1fr))" } }}>
+        <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "minmax(0, 1fr)", sm: "repeat(2, minmax(0, 1fr))", lg: "repeat(3, minmax(0, 1fr))" } }}>
           {attachments.map((attachment) => {
             const Icon = iconFor(attachment.contentType);
 
             return (
-              <Box key={attachment.id} sx={{ border: `1px solid ${line}`, borderRadius: "12px", p: 2, display: "flex", flexDirection: "column", gap: 1.5 }}>
+              <Box key={attachment.id} sx={{ border: `1px solid ${line}`, borderRadius: "12px", p: 1.5, display: "flex", flexDirection: "column", gap: 1.25 }}>
                 <Box sx={{ display: "flex", gap: 1.5, alignItems: "center", minWidth: 0 }}>
                   <Icon sx={{ color: inkSoft }} />
                   <Box sx={{ minWidth: 0 }}>
@@ -58,6 +55,6 @@ export default function AttachmentsCard({ workflowId, attachments }: { workflowI
           })}
         </Box>
       )}
-    </Card>
+    </Panel>
   );
 }

@@ -1,18 +1,12 @@
 import type { Metadata } from "next";
-import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
-import Card from "@mui/material/Card";
 import Stack from "@mui/material/Stack";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableHead from "@mui/material/TableHead";
-import TableRow from "@mui/material/TableRow";
-import TextField from "@mui/material/TextField";
-import Typography from "@mui/material/Typography";
 import ConfirmDeleteButton from "@/components/ui/ConfirmDeleteButton";
+import DataTable from "@/components/ui/DataTable";
+import FilterBar from "@/components/ui/FilterBar";
 import FormDialog from "@/components/ui/FormDialog";
+import ListCard from "@/components/ui/ListCard";
 import PageError from "@/components/ui/PageError";
+import PageHeader from "@/components/ui/PageHeader";
 import Pager from "@/components/ui/Pager";
 import TextLink from "@/components/ui/TextLink";
 import { departmentService } from "@/features/departments/services/DepartmentService";
@@ -38,53 +32,42 @@ export default async function UsersPage({ searchParams }: PageProps<"/users">) {
   const { users: list, departments: departmentOptions } = data.value;
 
   return (
-    <Stack spacing={3}>
-      <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center" }}>
-        <Typography variant="h4">Usuários</Typography>
-        <FormDialog title="Novo usuário" trigger="Novo usuário" action={createUser}>
-          <UserFields departments={departmentOptions} withPassword />
-        </FormDialog>
-      </Stack>
+    <Stack spacing={2.5}>
+      <PageHeader
+        title="Usuários"
+        description="Quem acessa o sistema e em qual departamento trabalha."
+        actions={
+          <FormDialog title="Novo usuário" trigger="Novo usuário" action={createUser}>
+            <UserFields departments={departmentOptions} withPassword />
+          </FormDialog>
+        }
+      />
 
-      <Box component="form" sx={{ display: "flex", gap: 1 }}>
-        <TextField name="search" label="Buscar" size="small" defaultValue={search} />
-        <Button type="submit" variant="outlined">
-          Buscar
-        </Button>
-      </Box>
-
-      <Card variant="outlined">
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Matrícula</TableCell>
-              <TableCell>Nome</TableCell>
-              <TableCell>E-mail</TableCell>
-              <TableCell>Departamento</TableCell>
-              <TableCell align="right">Ações</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {list.items.map((u) => (
-              <TableRow key={u.id}>
-                <TableCell sx={{ fontVariantNumeric: "tabular-nums" }}>{u.registration}</TableCell>
-                <TableCell>
-                  <TextLink href={`/users/${u.id}`}>{u.name}</TextLink>
-                </TableCell>
-                <TableCell>{u.email}</TableCell>
-                <TableCell>{u.department}</TableCell>
-                <TableCell align="right">
-                  <FormDialog compact title="Editar usuário" trigger="Editar" action={updateUser.bind(null, u.id)}>
-                    <UserFields departments={departmentOptions} user={u} />
-                  </FormDialog>
-                  <ConfirmDeleteButton name={u.name} action={deleteUser.bind(null, u.id)} />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-        <Pager basePath="/users" page={list.page} pageSize={list.pageSize} totalCount={list.totalCount} params={{ search }} />
-      </Card>
+      <ListCard
+        toolbar={<FilterBar basePath="/users" values={{ search }} fields={[{ type: "search", name: "search", label: "Buscar por nome ou matrícula" }]} />}
+        footer={<Pager basePath="/users" page={list.page} pageSize={list.pageSize} totalCount={list.totalCount} params={{ search }} />}
+      >
+        <DataTable
+          rows={list.items}
+          rowKey={(user) => user.id}
+          emptyTitle={search ? "Ninguém encontrado" : "Nenhum usuário cadastrado"}
+          emptyHint={search ? "Tente outro nome ou matrícula." : "Cadastre o primeiro usuário em Novo usuário."}
+          columns={[
+            { key: "registration", header: "Matrícula", fit: true, numeric: true, align: "left", render: (user) => user.registration },
+            { key: "name", header: "Nome", render: (user) => <TextLink href={`/users/${user.id}`}>{user.name}</TextLink> },
+            { key: "email", header: "E-mail", fit: true, hideBelow: "md", render: (user) => user.email ?? "—" },
+            { key: "department", header: "Departamento", fit: true, render: (user) => user.department },
+          ]}
+          actions={(user) => (
+            <>
+              <FormDialog iconOnly title="Editar usuário" trigger="Editar" action={updateUser.bind(null, user.id)}>
+                <UserFields departments={departmentOptions} user={user} />
+              </FormDialog>
+              <ConfirmDeleteButton iconOnly name={user.name} action={deleteUser.bind(null, user.id)} />
+            </>
+          )}
+        />
+      </ListCard>
     </Stack>
   );
 }

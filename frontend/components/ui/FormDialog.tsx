@@ -1,12 +1,15 @@
 "use client";
 
 import { startTransition, useActionState, useState, type FormEvent, type ReactNode } from "react";
+import EditOutlined from "@mui/icons-material/EditOutlined";
 import Button from "@mui/material/Button";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
+import IconButton from "@mui/material/IconButton";
 import Stack from "@mui/material/Stack";
+import Tooltip from "@mui/material/Tooltip";
 import type { Result } from "@/lib/result";
 import ErrorAlert from "./ErrorAlert";
 
@@ -18,25 +21,34 @@ type Props = {
   action: FormAction;
   children: ReactNode;
   compact?: boolean;
+  iconOnly?: boolean;
   maxWidth?: "xs" | "sm" | "md";
   submitLabel?: string;
   color?: "primary" | "error" | "success";
   variant?: "contained" | "outlined" | "text";
 };
 
-export default function FormDialog({ title, trigger, action, children, compact, maxWidth = "xs", submitLabel = "Salvar", color = "primary", variant }: Props) {
+export default function FormDialog({ title, trigger, action, children, compact, iconOnly, maxWidth = "xs", submitLabel = "Salvar", color = "primary", variant }: Props) {
   const [open, setOpen] = useState(false);
 
   return (
     <>
-      <Button
-        variant={variant ?? (compact ? "text" : "contained")}
-        size={compact ? "small" : "medium"}
-        color={color}
-        onClick={() => setOpen(true)}
-      >
-        {trigger}
-      </Button>
+      {iconOnly ? (
+        <Tooltip title={trigger}>
+          <IconButton size="small" aria-label={trigger} onClick={() => setOpen(true)}>
+            <EditOutlined fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      ) : (
+        <Button
+          variant={variant ?? (compact ? "text" : "contained")}
+          size={compact ? "small" : "medium"}
+          color={color}
+          onClick={() => setOpen(true)}
+        >
+          {trigger}
+        </Button>
+      )}
       <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth={maxWidth}>
         <DialogForm title={title} action={action} submitLabel={submitLabel} color={color} onClose={() => setOpen(false)}>
           {children}

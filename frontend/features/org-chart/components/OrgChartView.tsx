@@ -86,7 +86,7 @@ export default function OrgChartView({ chart, departments, users }: Props) {
   }
 
   return (
-    <Stack spacing={3}>
+    <Stack spacing={2.5}>
       <Stack direction={{ xs: "column", lg: "row" }} spacing={2} sx={{ justifyContent: "space-between", alignItems: { lg: "center" } }}>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
           <TextField
@@ -155,7 +155,7 @@ export default function OrgChartView({ chart, departments, users }: Props) {
         {matched ? ` · ${matched.size} ${matched.size === 1 ? "resultado" : "resultados"} na busca` : ""}
       </Typography>
 
-      <Box sx={{ display: "grid", gap: 3, gridTemplateColumns: { xs: "minmax(0, 1fr)", lg: "minmax(0, 1fr) 360px" }, alignItems: "start" }}>
+      <Box sx={{ display: "grid", gap: 2.5, gridTemplateColumns: { xs: "minmax(0, 1fr)", lg: "minmax(0, 1fr) 360px" }, alignItems: "start" }}>
         {view === "diagram" ? <OrgDiagram roots={roots} ctx={ctx} zoom={ZOOMS[zoomIndex]} /> : <OrgOutline roots={roots} ctx={ctx} />}
 
         <Box sx={{ position: { lg: "sticky" }, top: { lg: 88 } }}>

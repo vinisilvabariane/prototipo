@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import ArrowBack from "@mui/icons-material/ArrowBack";
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
-import Card from "@mui/material/Card";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
+import EmptyState from "@/components/ui/EmptyState";
 import PageError from "@/components/ui/PageError";
+import PageHeader from "@/components/ui/PageHeader";
+import Panel from "@/components/ui/Panel";
 import { userService } from "@/features/users/services/UserService";
 import { all } from "@/lib/result";
 import { inkSoft, line } from "@/lib/tokens";
@@ -38,42 +38,27 @@ export default async function UserPage({ params }: PageProps<"/users/[id]">) {
   const { user: person, roles: assigned } = data.value;
 
   return (
-    <Stack spacing={4}>
-      <Box>
-        <Button href="/users" size="small" startIcon={<ArrowBack fontSize="small" />} sx={{ color: inkSoft, ml: -1 }}>
-          Usuários
-        </Button>
-        <Typography variant="h4" component="h1" sx={{ mt: 1 }}>
-          {person.name}
-        </Typography>
-      </Box>
+    <Stack spacing={2.5}>
+      <PageHeader title={person.name} eyebrow={`Matrícula ${person.registration}`} back={{ href: "/users", label: "Usuários" }} />
 
-      <Box sx={{ display: "grid", gap: 3, gridTemplateColumns: { xs: "minmax(0, 1fr)", md: "repeat(2, minmax(0, 1fr))" }, alignItems: "start" }}>
-        <Card sx={{ p: 3 }}>
-          <Typography variant="overline" component="h2" sx={{ color: inkSoft }}>
-            Dados
-          </Typography>
-          <Box sx={{ mt: 1 }}>
-            <Field label="Matrícula">
-              <Box component="span" sx={{ fontVariantNumeric: "tabular-nums" }}>
-                {person.registration}
-              </Box>
-            </Field>
-            <Field label="E-mail">{person.email ?? "—"}</Field>
-            <Field label="Departamento">{person.department}</Field>
-          </Box>
-        </Card>
+      <Box sx={{ display: "grid", gap: 2.5, gridTemplateColumns: { xs: "minmax(0, 1fr)", md: "repeat(2, minmax(0, 1fr))" }, alignItems: "start" }}>
+        <Panel title="Dados">
+          <Field label="Matrícula">
+            <Box component="span" sx={{ fontVariantNumeric: "tabular-nums" }}>
+              {person.registration}
+            </Box>
+          </Field>
+          <Field label="E-mail">{person.email ?? "—"}</Field>
+          <Field label="Departamento">{person.department}</Field>
+        </Panel>
 
-        <Card sx={{ p: 3 }}>
-          <Typography variant="overline" component="h2" sx={{ color: inkSoft }}>
-            Perfis ({assigned.length})
-          </Typography>
+        <Panel title="Perfis" count={assigned.length}>
           {assigned.length === 0 ? (
-            <Typography sx={{ mt: 2, color: inkSoft }}>Nenhum perfil atribuído a este usuário.</Typography>
+            <EmptyState compact title="Nenhum perfil atribuído" hint="Este usuário ainda não recebeu nenhum perfil." />
           ) : (
-            <Box component="ul" sx={{ listStyle: "none", m: 0, mt: 1, p: 0 }}>
+            <Box component="ul" sx={{ listStyle: "none", m: 0, p: 0 }}>
               {assigned.map((role) => (
-                <Box key={role.id} component="li" sx={{ py: 1.5, borderBottom: `1px solid ${line}`, "&:last-of-type": { borderBottom: 0 } }}>
+                <Box key={role.id} component="li" sx={{ py: 1, borderBottom: `1px solid ${line}`, "&:last-of-type": { borderBottom: 0 } }}>
                   <Typography sx={{ fontWeight: 600 }}>{role.name}</Typography>
                   <Typography variant="body2" sx={{ color: inkSoft }}>
                     {role.description}
@@ -82,7 +67,7 @@ export default async function UserPage({ params }: PageProps<"/users/[id]">) {
               ))}
             </Box>
           )}
-        </Card>
+        </Panel>
       </Box>
     </Stack>
   );

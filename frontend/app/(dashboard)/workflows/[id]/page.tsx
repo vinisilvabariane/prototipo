@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import ArrowBack from "@mui/icons-material/ArrowBack";
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
-import Card from "@mui/material/Card";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import FormDialog from "@/components/ui/FormDialog";
 import PageError from "@/components/ui/PageError";
+import PageHeader from "@/components/ui/PageHeader";
+import Panel from "@/components/ui/Panel";
 import { approveWorkflow, rejectWorkflow, updateWorkflow } from "@/features/workflows/actions/workflowActions";
 import AssigneesCard from "@/features/workflows/components/AssigneesCard";
 import AttachmentsCard from "@/features/workflows/components/AttachmentsCard";
@@ -52,30 +51,25 @@ export default async function WorkflowPage({ params }: PageProps<"/workflows/[id
   if (!users.ok) return <PageError title="Workflow" error={users.error} retryHref={`/workflows/${workflowId}`} />;
 
   return (
-    <Stack spacing={4}>
-      <Box>
-        <Button href="/workflows" size="small" startIcon={<ArrowBack fontSize="small" />} sx={{ color: inkSoft, ml: -1 }}>
-          Workflows
-        </Button>
-        <Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ mt: 1, justifyContent: "space-between", alignItems: { md: "flex-start" } }}>
-          <Box sx={{ minWidth: 0 }}>
-            <Typography variant="overline" component="p" sx={{ color: inkSoft }}>
-              Workflow #{workflow.id}
-            </Typography>
-            <Typography variant="h4" component="h1" sx={{ overflowWrap: "anywhere" }}>
-              {workflow.title}
-            </Typography>
-            <Stack direction="row" spacing={1} sx={{ mt: 1.5, alignItems: "center", flexWrap: "wrap", rowGap: 1 }}>
-              <StatusChip status={workflow.status} />
-              <PriorityChip priority={workflow.priority} />
-              <CategoryChip category={workflow.category} />
-            </Stack>
-            <Typography sx={{ mt: 1.5, color: inkSoft }}>
-              Prazo final: <DueDate dueDate={workflow.dueDate} closed={closed} />
-            </Typography>
-          </Box>
-
-          <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", rowGap: 1, alignItems: "flex-start" }}>
+    <Stack spacing={2.5}>
+      <PageHeader
+        back={{ href: "/workflows", label: "Workflows" }}
+        eyebrow={`Workflow #${workflow.id}`}
+        title={workflow.title}
+        badges={
+          <>
+            <StatusChip status={workflow.status} />
+            <PriorityChip priority={workflow.priority} />
+            <CategoryChip category={workflow.category} />
+          </>
+        }
+        description={
+          <>
+            Prazo final: <DueDate dueDate={workflow.dueDate} closed={closed} />
+          </>
+        }
+        actions={
+          <>
             {permissions.canApprove && (
               <FormDialog title="Aprovar workflow" trigger="Aprovar" submitLabel="Confirmar aprovação" action={approveWorkflow.bind(null, workflow.id)}>
                 <JustificationField />
@@ -92,33 +86,25 @@ export default async function WorkflowPage({ params }: PageProps<"/workflows/[id
               </FormDialog>
             )}
             <WorkflowPdfButton workflow={workflow} />
-          </Stack>
-        </Stack>
-      </Box>
+          </>
+        }
+      />
 
-      <Box sx={{ display: "grid", gap: 3, gridTemplateColumns: { xs: "minmax(0, 1fr)", md: "minmax(0, 2fr) minmax(0, 1fr)" }, alignItems: "start" }}>
-        <Card sx={{ p: 3 }}>
-          <Typography variant="overline" component="h2" sx={{ color: inkSoft }}>
-            Descrição
-          </Typography>
-          <Typography sx={{ mt: 1.5, whiteSpace: "pre-wrap", overflowWrap: "anywhere", color: workflow.description ? "text.primary" : inkSoft, fontStyle: workflow.description ? "normal" : "italic" }}>
+      <Box sx={{ display: "grid", gap: 2.5, gridTemplateColumns: { xs: "minmax(0, 1fr)", md: "minmax(0, 2fr) minmax(0, 1fr)" }, alignItems: "start" }}>
+        <Panel title="Descrição">
+          <Typography sx={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere", color: workflow.description ? "text.primary" : inkSoft, fontStyle: workflow.description ? "normal" : "italic" }}>
             {workflow.description || "Sem descrição"}
           </Typography>
-        </Card>
+        </Panel>
 
-        <Card sx={{ p: 3 }}>
-          <Typography variant="overline" component="h2" sx={{ color: inkSoft }}>
-            Detalhes
-          </Typography>
-          <Box sx={{ mt: 1 }}>
-            <Field label="Criado por">{workflow.creatorName}</Field>
-            <Field label="Data de criação">{formatDateTime(workflow.createdAt)}</Field>
-            {workflow.completedAt && <Field label="Concluído em">{formatDateTime(workflow.completedAt)}</Field>}
-          </Box>
-        </Card>
+        <Panel title="Detalhes">
+          <Field label="Criado por">{workflow.creatorName}</Field>
+          <Field label="Data de criação">{formatDateTime(workflow.createdAt)}</Field>
+          {workflow.completedAt && <Field label="Concluído em">{formatDateTime(workflow.completedAt)}</Field>}
+        </Panel>
       </Box>
 
-      <Box sx={{ display: "grid", gap: 3, gridTemplateColumns: { xs: "minmax(0, 1fr)", md: "minmax(0, 5fr) minmax(0, 7fr)" }, alignItems: "start" }}>
+      <Box sx={{ display: "grid", gap: 2.5, gridTemplateColumns: { xs: "minmax(0, 1fr)", md: "minmax(0, 5fr) minmax(0, 7fr)" }, alignItems: "start" }}>
         <AssigneesCard
           workflowId={workflow.id}
           creatorId={workflow.creatorId}
@@ -127,12 +113,9 @@ export default async function WorkflowPage({ params }: PageProps<"/workflows/[id
           canManage={permissions.canManageAssignees}
         />
 
-        <Card sx={{ p: 3 }}>
-          <Typography variant="overline" component="h2" sx={{ color: inkSoft, mb: 2, display: "block" }}>
-            Histórico de ações
-          </Typography>
+        <Panel title="Histórico de ações">
           <StepTimeline workflowId={workflow.id} steps={workflow.steps} />
-        </Card>
+        </Panel>
       </Box>
 
       <AttachmentsCard workflowId={workflow.id} attachments={workflow.attachments} />

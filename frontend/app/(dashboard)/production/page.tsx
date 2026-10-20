@@ -4,16 +4,15 @@ import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
 import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableHead from "@mui/material/TableHead";
-import TableRow from "@mui/material/TableRow";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
+import DataTable from "@/components/ui/DataTable";
+import EmptyState from "@/components/ui/EmptyState";
 import FormDialog from "@/components/ui/FormDialog";
 import PageError from "@/components/ui/PageError";
+import PageHeader from "@/components/ui/PageHeader";
 import Pager from "@/components/ui/Pager";
+import Panel from "@/components/ui/Panel";
 import TextLink from "@/components/ui/TextLink";
 import { createRunFromForm } from "@/features/production/actions/runActions";
 import { formatDateTime, formatQuantity } from "@/features/production/format";
@@ -87,43 +86,46 @@ export default async function ProductionPage({ searchParams }: PageProps<"/produ
   const active = [...data.running.items, ...data.preparing.items];
 
   return (
-    <Stack spacing={4}>
-      <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ justifyContent: "space-between", alignItems: { sm: "center" } }}>
-        <Typography variant="h4" component="h1">
-          Produção
-        </Typography>
-        <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", rowGap: 1 }}>
-          <Button variant="outlined" href="/production/layouts">
-            Layouts de linha
-          </Button>
-          <Button variant="outlined" href="/production/setup">
-            Cadastros
-          </Button>
-          {data.closed.canSupervise && (
-            <FormDialog title="Nova produção" trigger="Nova produção" submitLabel="Preparar" action={createRunFromForm}>
-              <Typography variant="body2" sx={{ color: inkSoft }}>
-                Escolha o layout. A produção nasce em preparo: você aloca as pessoas nos postos e só então inicia.
-              </Typography>
-              <TextField select label="Layout" name="layoutId" defaultValue="" required fullWidth>
-                {data.layouts.items.map((layout) => (
-                  <MenuItem key={layout.id} value={layout.id}>
-                    {layout.lineName} · {layout.productCode} · {layout.shiftName}
-                  </MenuItem>
-                ))}
-              </TextField>
-            </FormDialog>
-          )}
-        </Stack>
-      </Stack>
+    <Stack spacing={2.5}>
+      <PageHeader
+        title="Produção"
+        description="Alocação de pessoas nos postos, início da produção e produtividade por posto."
+        actions={
+          <>
+            <Button variant="outlined" href="/production/layouts">
+              Layouts de linha
+            </Button>
+            <Button variant="outlined" href="/production/setup">
+              Cadastros
+            </Button>
+            {data.closed.canSupervise && (
+              <FormDialog title="Nova produção" trigger="Nova produção" submitLabel="Preparar" action={createRunFromForm}>
+                <Typography variant="body2" sx={{ color: inkSoft }}>
+                  Escolha o layout. A produção nasce em preparo: você aloca as pessoas nos postos e só então inicia.
+                </Typography>
+                <TextField select label="Layout" name="layoutId" defaultValue="" required fullWidth>
+                  {data.layouts.items.map((layout) => (
+                    <MenuItem key={layout.id} value={layout.id}>
+                      {layout.lineName} · {layout.productCode} · {layout.shiftName}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </FormDialog>
+            )}
+          </>
+        }
+      />
 
       <Box component="section" aria-labelledby="active-runs">
-        <Typography id="active-runs" variant="overline" component="h2" sx={{ color: inkSoft }}>
-          Em andamento e em preparo ({active.length})
+        <Typography id="active-runs" variant="overline" component="h2" sx={{ color: inkSoft, display: "block", mb: 1 }}>
+          Em andamento e em preparo · {active.length}
         </Typography>
         {active.length === 0 ? (
-          <Typography sx={{ color: inkSoft, mt: 1.5 }}>Nenhuma linha produzindo agora. Use Nova produção para preparar uma.</Typography>
+          <Card>
+            <EmptyState compact title="Nenhuma linha produzindo agora" hint="Use Nova produção para preparar uma." />
+          </Card>
         ) : (
-          <Box sx={{ display: "grid", gap: 2, mt: 1.5, gridTemplateColumns: { xs: "minmax(0, 1fr)", md: "repeat(2, minmax(0, 1fr))", xl: "repeat(3, minmax(0, 1fr))" } }}>
+          <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "minmax(0, 1fr)", md: "repeat(2, minmax(0, 1fr))", xl: "repeat(3, minmax(0, 1fr))" } }}>
             {active.map((run) => (
               <ActiveCard key={run.id} run={run} />
             ))}
@@ -131,57 +133,27 @@ export default async function ProductionPage({ searchParams }: PageProps<"/produ
         )}
       </Box>
 
-      <Box component="section" aria-labelledby="closed-runs">
-        <Typography id="closed-runs" variant="overline" component="h2" sx={{ color: inkSoft }}>
-          Encerradas
-        </Typography>
-        <Card variant="outlined" sx={{ mt: 1.5 }}>
-          <Box sx={{ overflowX: "auto" }}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Linha</TableCell>
-                  <TableCell>Produto</TableCell>
-                  <TableCell>Turno</TableCell>
-                  <TableCell>Início</TableCell>
-                  <TableCell>Fim</TableCell>
-                  <TableCell align="right">Produzido</TableCell>
-                  <TableCell align="right">Ações</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {data.closed.items.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={7} sx={{ color: inkSoft, textAlign: "center", py: 4 }}>
-                      Nenhuma produção encerrada ainda.
-                    </TableCell>
-                  </TableRow>
-                )}
-                {data.closed.items.map((run) => (
-                  <TableRow key={run.id}>
-                    <TableCell sx={{ fontWeight: 600 }}>
-                      <TextLink href={`/production/runs/${run.id}`}>{run.lineName}</TextLink>
-                    </TableCell>
-                    <TableCell>{run.productCode}</TableCell>
-                    <TableCell>{run.shiftName}</TableCell>
-                    <TableCell sx={{ whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>{formatDateTime(run.startedAt)}</TableCell>
-                    <TableCell sx={{ whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>{formatDateTime(run.endedAt)}</TableCell>
-                    <TableCell align="right" sx={{ fontVariantNumeric: "tabular-nums", fontWeight: 600 }}>
-                      {formatQuantity(run.produced)}
-                    </TableCell>
-                    <TableCell align="right">
-                      <Button size="small" href={`/production/runs/${run.id}`}>
-                        Ver resultado
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Box>
-          <Pager basePath="/production" page={data.closed.page} pageSize={data.closed.pageSize} totalCount={data.closed.totalCount} />
-        </Card>
-      </Box>
+      <Panel title="Encerradas" count={data.closed.totalCount} flush>
+        <DataTable
+          rows={data.closed.items}
+          rowKey={(run) => run.id}
+          emptyTitle="Nenhuma produção encerrada ainda"
+          columns={[
+            { key: "line", header: "Linha", strong: true, render: (run) => <TextLink href={`/production/runs/${run.id}`}>{run.lineName}</TextLink> },
+            { key: "product", header: "Produto", render: (run) => run.productCode },
+            { key: "shift", header: "Turno", fit: true, hideBelow: "md", render: (run) => run.shiftName },
+            { key: "startedAt", header: "Início", fit: true, numeric: true, align: "left", render: (run) => formatDateTime(run.startedAt) },
+            { key: "endedAt", header: "Fim", fit: true, numeric: true, align: "left", hideBelow: "md", render: (run) => formatDateTime(run.endedAt) },
+            { key: "produced", header: "Produzido", fit: true, numeric: true, strong: true, render: (run) => formatQuantity(run.produced) },
+          ]}
+          actions={(run) => (
+            <Button size="small" href={`/production/runs/${run.id}`}>
+              Ver resultado
+            </Button>
+          )}
+        />
+        <Pager basePath="/production" page={data.closed.page} pageSize={data.closed.pageSize} totalCount={data.closed.totalCount} />
+      </Panel>
     </Stack>
   );
 }

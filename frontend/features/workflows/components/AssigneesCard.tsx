@@ -1,11 +1,11 @@
 import Box from "@mui/material/Box";
-import Card from "@mui/material/Card";
 import Chip from "@mui/material/Chip";
 import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import FormDialog from "@/components/ui/FormDialog";
+import Panel from "@/components/ui/Panel";
 import { inkSoft, line } from "@/lib/tokens";
 import { addAssignee, replaceAssignee } from "../actions/workflowActions";
 import type { WorkflowAssignee, WorkflowUser } from "../types";
@@ -35,19 +35,18 @@ export default function AssigneesCard({ workflowId, creatorId, assignees, candid
   const available = candidates.filter((user) => !listed.has(user.id));
 
   return (
-    <Card sx={{ p: 3 }}>
-      <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center" }}>
-        <Typography variant="overline" component="h2" sx={{ color: inkSoft }}>
-          Responsáveis ({assignees.length})
-        </Typography>
-        {canManage && (
-          <FormDialog compact title="Adicionar responsável" trigger="Adicionar" submitLabel="Adicionar" action={addAssignee.bind(null, workflowId)}>
+    <Panel
+      title="Responsáveis"
+      count={assignees.length}
+      action={
+        canManage && (
+          <FormDialog compact variant="outlined" title="Adicionar responsável" trigger="Adicionar" submitLabel="Adicionar" action={addAssignee.bind(null, workflowId)}>
             <UserSelect name="userId" label="Usuário" users={available} />
           </FormDialog>
-        )}
-      </Stack>
-
-      <Box component="ul" sx={{ listStyle: "none", m: 0, mt: 1, p: 0 }}>
+        )
+      }
+    >
+      <Box component="ul" sx={{ listStyle: "none", m: 0, p: 0 }}>
         {assignees.map((assignee) => {
           const isCreator = assignee.userId === creatorId;
 
@@ -55,7 +54,7 @@ export default function AssigneesCard({ workflowId, creatorId, assignees, candid
             <Box
               key={assignee.userId}
               component="li"
-              sx={{ py: 1.5, borderBottom: `1px solid ${line}`, "&:last-of-type": { borderBottom: 0 }, display: "flex", gap: 1, alignItems: "center", justifyContent: "space-between" }}
+              sx={{ py: 1, borderBottom: `1px solid ${line}`, "&:last-of-type": { borderBottom: 0 }, display: "flex", gap: 1, alignItems: "center", justifyContent: "space-between" }}
             >
               <Box sx={{ minWidth: 0 }}>
                 <Typography noWrap sx={{ fontWeight: 600 }}>
@@ -87,6 +86,6 @@ export default function AssigneesCard({ workflowId, creatorId, assignees, candid
           );
         })}
       </Box>
-    </Card>
+    </Panel>
   );
 }

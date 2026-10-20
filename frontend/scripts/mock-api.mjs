@@ -1,5 +1,7 @@
 import http from "node:http";
 import { createInstructionMock } from "./mock-instructions.mjs";
+import { createHelpdeskMock } from "./mock-helpdesk.mjs";
+import { createOeeMock } from "./mock-oee.mjs";
 import { createProductionMock } from "./mock-production.mjs";
 import { createSupplierMock } from "./mock-suppliers.mjs";
 import { createOrgChartMock } from "./mock-org-chart.mjs";
@@ -31,6 +33,8 @@ const handleOrgChart = createOrgChartMock(db.users, db.departments);
 const handleInstructions = createInstructionMock(db.users);
 const handleSuppliers = createSupplierMock(db.users, db.departments);
 const handleProduction = createProductionMock(db.users);
+const handleHelpdesk = createHelpdeskMock(db.users, handleProduction.data);
+const handleOee = createOeeMock(db.users, handleProduction.data, handleHelpdesk.data);
 
 let nextId = 100;
 let mode = "ok";
@@ -170,6 +174,14 @@ http
 
     if (resource === "production") {
       return handleProduction({ req, res, url, segments, actor: actorFrom(req.headers.authorization), json: body, send, fail });
+    }
+
+    if (resource === "helpdesk") {
+      return handleHelpdesk({ req, res, url, segments, actor: actorFrom(req.headers.authorization), json: body, send, fail });
+    }
+
+    if (resource === "oee") {
+      return handleOee({ req, res, url, segments, actor: actorFrom(req.headers.authorization), json: body, send, fail });
     }
 
     if (resource === "suppliers") {

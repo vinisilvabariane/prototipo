@@ -1,30 +1,19 @@
 import type { ReactNode } from "react";
 import Box from "@mui/material/Box";
-import Card from "@mui/material/Card";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
+import Panel from "@/components/ui/Panel";
 import { brand, inkSoft, line } from "@/lib/tokens";
 import { formatHour, formatMinutes, formatPercent, formatQuantity } from "../format";
 import { POST_KIND_LABELS } from "../labels";
 import type { RunDetail } from "../types";
 
-function Panel({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <Card sx={{ overflow: "hidden" }}>
-      <Typography variant="overline" component="h2" sx={{ display: "block", color: inkSoft, px: 2.5, pt: 2, pb: 0.5 }}>
-        {title}
-      </Typography>
-      {children}
-    </Card>
-  );
-}
-
 function Empty({ children }: { children: ReactNode }) {
-  return <Typography sx={{ color: inkSoft, px: 2.5, pb: 2.5, pt: 1 }}>{children}</Typography>;
+  return <Typography sx={{ color: inkSoft }}>{children}</Typography>;
 }
 
 function attainmentColor(value: number | null) {
@@ -39,8 +28,8 @@ export default function ProductivityPanels({ run }: { run: RunDetail }) {
   const maxHour = Math.max(1, ...run.hours.map((hour) => hour.produced));
 
   return (
-    <Box sx={{ display: "grid", gap: 3 }}>
-      <Panel title="Produtividade por posto">
+    <Box sx={{ display: "grid", gap: 2.5 }}>
+      <Panel title="Produtividade por posto" flush={started}>
         {!started ? (
           <Empty>Os números aparecem quando a produção começar.</Empty>
         ) : (
@@ -99,8 +88,8 @@ export default function ProductivityPanels({ run }: { run: RunDetail }) {
         )}
       </Panel>
 
-      <Box sx={{ display: "grid", gap: 3, gridTemplateColumns: { xs: "minmax(0, 1fr)", md: "minmax(0, 1fr) minmax(0, 1fr)" }, alignItems: "start" }}>
-        <Panel title="Pessoas">
+      <Box sx={{ display: "grid", gap: 2.5, gridTemplateColumns: { xs: "minmax(0, 1fr)", md: "minmax(0, 1fr) minmax(0, 1fr)" }, alignItems: "start" }}>
+        <Panel title="Pessoas" count={run.people.length} flush={run.people.length > 0}>
           {run.people.length === 0 ? (
             <Empty>Ninguém foi alocado ainda.</Empty>
           ) : (
