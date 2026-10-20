@@ -13,7 +13,7 @@ Estas instruções valem para `meone/backend`. Quatro projetos de código e um d
 O alvo é **Clean Architecture**. O escopo funcional é o controle de acesso (autenticação e CRUD de
 usuários, roles, departamentos e escopos), o módulo **Workflow** (fluxo de aprovação), o
 **Organograma** (cargos em árvore), as **Instruções de trabalho** (documentos de processo com PDF), os
-**Fornecedores** (cadastro e qualificação) e as **Linhas e postos** (layout da linha, alocação de pessoas e produtividade por posto). Módulo novo segue a mesma estrutura descrita aqui.
+**Fornecedores** (cadastro e qualificação), as **Linhas e postos** (layout da linha, alocação de pessoas e produtividade por posto) e o **OEE** (eficiência por linha e posto, com fórmulas configuráveis) e o **Help desk** (setores com formulário montável e chamados). Módulo novo segue a mesma estrutura descrita aqui.
 
 ## Idioma
 
@@ -417,3 +417,37 @@ Treinamentos, ranks, scores e relatório de experiência ficaram de fora.
   cancela; `production.execute` lança produção. Leitura é `[Authorize]`. As respostas trazem `canManage`, `canSupervise` e `canRecord` para a tela.
 - Fora do port: treinamentos, ranks e scores, alocação rápida por QR Code, integração com SAP, MQTT e catraca (a quantidade é lançada à mão), copiar
   alocação de um dia qualquer e a edição de um layout compartilhado por vários produtos ao mesmo tempo.
+
+## OEE (eficiência por linha e posto)
+
+Portado do módulo OEE do Bifrost, calculado em cima das produções de **Linhas e postos** (`ProductionRun`) em `api/v1/oee`.
+O posto do mapa faz o papel da máquina do Bifrost e a produção (run) faz o papel do turno da linha.
+
+- **Cálculo** (`OeeCalculator`, Domain, puro e sem I/O): por posto, disponibilidade × desempenho × qualidade; por linha, cada pilar é uma agregação
+  dos postos **medidos** (os que têm meta por hora). Padrões: disponibilidade = `(elapsed_seconds - downtime_availability) / elapsed_seconds`,
+  desempenho = `real_production / theoretical_production`, qualidade = `(real_production - defects) / real_production` (1 se não produziu), OEE do posto = A × P × Q,
+  linha: disponibilidade `availability_average`, desempenho `performance_last_post`, qualidade `quality_product`, OEE = A × P × Q. Pilares nunca ficam abaixo de 0 e saem em % com 2 casas.
+  "Último posto" é o medido de maior `X` do mapa. Há detalhe hora a hora da linha e de cada posto.
+- **Variáveis** (`OeeCatalog`): produzido (lançamentos), teórica (meta/h × tempo decorrido), esperada (meta/h × tempo com gente), tempo decorrido/ocupado, paradas, defeitos e as
+  agregações de cada pilar (`<pilar>_average|sum|product|last_post`). Cada variável declara em quais campos de fórmula pode aparecer (`OeeScope`).
+- **Fórmulas** (`OeeFormula`): expressão de texto, sem dependência externa, com `+ - * /`, menos unário, parênteses, comparações (`< > <= >= == !=`) e as funções
+  `min`, `max`, `abs`, `clamp`, `if`, `round`. Divisão por zero e resultado não finito viram 0. Variável desconhecida vale 0; o validador recusa a que não pertence ao campo.
+  Parse devolve mensagem em pt-BR e a posição do erro. Fórmula salva que deixa de compilar cai no padrão do campo em vez de derrubar a leitura.
+- **Conjuntos de fórmulas** (`OeeFormulaSet`, tabela `oee_formula_sets`): 8 campos (3 pilares + OEE do posto, 3 pilares + OEE da linha). No máximo um ativo; nenhum ativo = padrão do sistema.
+  O ativo não é excluído. Gerenciar exige `engineering.manage`; consultar e testar é `[Authorize]`. `POST formulas/test` avalia uma expressão com valores informados ou com os números reais de uma produção.
+- **Paradas e defeitos**: o Bifrost lê chamados e paradas do MES. Aqui `IOeeLossSource` é a porta e o **help desk** a implementa (`HelpdeskOeeLossSource`): chamado com linha parada vira perda de disponibilidade e defeito informado vira perda de qualidade. `OeeLosses` carrega paradas (por posto ou da linha toda) e defeitos; defeito sem posto conta no último posto medido. Sem a fonte, `lossSourceAvailable` vem falso e a tela avisa.
+- **Telas**: OEE da produção (equação, cascata de perdas, hora a hora, mapa de calor posto × hora e tabela por posto), comparativo por período (`GET runs`, até 92 dias e 60 produções),
+  tempo real (mesmo endpoint filtrado por `running`, a tela atualiza sozinha) e exportação em CSV feita no frontend. Fora do port: MQTT, intervalos de turno e tabela de predefinições do Bifrost.
+
+## Help desk (setores, formulários e chamados)
+
+Portado do sync-tickets (departamentos com formulário server-driven), com `api/v1/helpdesk`. "Departamento" do sync vira **setor** aqui, para não colidir com o `Department` organizacional.
+
+- **Setor** (`HelpdeskSector`): identidade (nome único, cor #RRGGBB, ícone de uma lista fixa `HelpdeskIcons`, até 5 etiquetas, ativo), formulário de abertura, formulário de resposta do técnico (opcional), até 3 campos de resumo do card e os **papéis que atendem** (`AttendantRoleIds`). Setor com `ExternalUrl` só redireciona: zera formulários, resumo e papéis. Gerenciar (setores e modelos de campo) exige `helpdesk.manage` (perfil `gestor-helpdesk`); listar e abrir chamado é `[Authorize]`.
+- **Formulário** (`HelpdeskForm`, JSON em `form_schema`): lista **plana** de campos que formam uma árvore por `DependsOn` (campo pai de lista/cards + valores). `HelpdeskFormRules.Check` garante ids únicos `[a-z][a-z0-9_]*`, opções únicas, pai antes do filho, valores existentes e no máximo 60 campos. Tipos: texto, texto longo, número, lista, cards e três **especiais**, no máximo um de cada e só no formulário de abertura: `ProductionSpot` (linha + posto), `LineStop` (parada e desde quando) e `Defects` (peças com defeito); parada e defeitos exigem a localização.
+- **Respostas** (`HelpdeskAnswers.Normalize`): chaves `id`, `id_post` e `id_time`. Só vale o ramo visível: campo escondido por condição não é exigido nem guardado. Parada sem horário usa agora; horário no futuro (>5 min) ou com mais de 7 dias é recusado.
+- **Chamado** (`HelpdeskTicket`): `Open → InProgress → Resolved`, ou `Open → Rejected`. Guarda **snapshots** do formulário de abertura e do de resposta, então editar o setor depois não muda o histórico. Assumir e recusar exigem atender o setor e o chamado estar aberto; só quem assumiu finaliza; recusar pede motivo. O formulário de resposta do setor, se existir, é obrigatório para finalizar. Quem abre vê o próprio chamado; quem atende vê os do setor; administrador vê tudo. Atender = administrador ou ter um dos `AttendantRoleIds`.
+- **Localização**: `GET locations` devolve as linhas ativas com os postos da produção em andamento (snapshot do mapa). O posto escolhido precisa pertencer a essa produção.
+- **Modelos de campo** (`HelpdeskFieldTemplate`): presets (texto, texto longo, número, lista, cards) copiados para o formulário; mudar o modelo não altera formulários prontos.
+- **Ligação com o OEE**: `HelpdeskOeeLossSource` implementa `IOeeLossSource` com os chamados da linha. Chamado com linha parada (não recusado) vira parada de **disponibilidade** do `StoppedAt` até finalizar (ou até agora); sem posto, vale para todos os postos. Defeitos entram na qualidade do posto escolhido; sem posto, no último posto medido do fluxo. `lineId = 0` só informa que a fonte existe.
+- Fora do port por enquanto: checklists com gatilho, analytics de downtime, tempo real por SignalR, quiosque/Andon e aviso no Google Chat.

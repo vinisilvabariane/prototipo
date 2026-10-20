@@ -72,6 +72,23 @@ public sealed class ProductionRunRepository(MeOneDbContext context)
             .Take(take)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<ProductionRun>> SearchStartedAsync(
+        RunStatus? status,
+        ulong? lineId,
+        DateTime from,
+        DateTime to,
+        int take,
+        CancellationToken cancellationToken) =>
+        await Filtered(status, lineId)
+            .Where(run => run.StartedAt != null && run.StartedAt <= to && (run.EndedAt == null || run.EndedAt >= from))
+            .Include(run => run.Allocations)
+            .Include(run => run.Outputs)
+            .AsSplitQuery()
+            .OrderByDescending(run => run.StartedAt)
+            .ThenByDescending(run => run.Id)
+            .Take(take)
+            .ToListAsync(cancellationToken);
+
     private IQueryable<ProductionRun> Filtered(RunStatus? status, ulong? lineId) =>
         DbSet.AsNoTracking()
             .Where(run => status == null || run.Status == status)

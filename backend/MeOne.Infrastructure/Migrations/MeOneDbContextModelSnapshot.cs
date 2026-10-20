@@ -72,6 +72,249 @@ namespace MeOne.Infrastructure.Migrations
                     b.ToTable("departments", (string)null);
                 });
 
+            modelBuilder.Entity("MeOne.Domain.Entities.HelpdeskFieldTemplate", b =>
+                {
+                    b.Property<ulong>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint unsigned")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<ulong>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)")
+                        .HasColumnName("label");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("varchar(60)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Options")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("options");
+
+                    b.Property<bool>("Required")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("required");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar(30)")
+                        .HasColumnName("type");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("helpdesk_field_templates", (string)null);
+                });
+
+            modelBuilder.Entity("MeOne.Domain.Entities.HelpdeskSector", b =>
+                {
+                    b.Property<ulong>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint unsigned")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<ulong>("Id"));
+
+                    b.Property<bool>("Active")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("active");
+
+                    b.Property<string>("AttendantRoleIds")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("attendant_role_ids");
+
+                    b.Property<string>("Badges")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("badges");
+
+                    b.Property<string>("ColorHex")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("varchar(7)")
+                        .HasColumnName("color_hex");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("ExternalUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("external_url");
+
+                    b.Property<string>("Form")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("form_schema");
+
+                    b.Property<string>("Icon")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("varchar(30)")
+                        .HasColumnName("icon");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("varchar(60)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("ResolutionForm")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("resolution_schema");
+
+                    b.Property<string>("SummaryFields")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("summary_fields");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("helpdesk_sectors", (string)null);
+                });
+
+            modelBuilder.Entity("MeOne.Domain.Entities.HelpdeskTicket", b =>
+                {
+                    b.Property<ulong>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint unsigned")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<ulong>("Id"));
+
+                    b.Property<string>("Answers")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("answers");
+
+                    b.Property<ulong?>("AssignedTo")
+                        .HasColumnType("bigint unsigned")
+                        .HasColumnName("assigned_to");
+
+                    b.Property<int>("Defects")
+                        .HasColumnType("int")
+                        .HasColumnName("defects");
+
+                    b.Property<DateTime?>("FinishedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("finished_at");
+
+                    b.Property<string>("FormSnapshot")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("form_snapshot");
+
+                    b.Property<bool>("IsLineStopped")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_line_stopped");
+
+                    b.Property<ulong?>("LineId")
+                        .HasColumnType("bigint unsigned")
+                        .HasColumnName("line_id");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)")
+                        .HasColumnName("note");
+
+                    b.Property<DateTime>("OpenedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("opened_at");
+
+                    b.Property<ulong>("OpenedBy")
+                        .HasColumnType("bigint unsigned")
+                        .HasColumnName("opened_by");
+
+                    b.Property<ulong?>("PostId")
+                        .HasColumnType("bigint unsigned")
+                        .HasColumnName("post_id");
+
+                    b.Property<string>("PostName")
+                        .HasMaxLength(60)
+                        .HasColumnType("varchar(60)")
+                        .HasColumnName("post_name");
+
+                    b.Property<string>("RejectReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("reject_reason");
+
+                    b.Property<ulong?>("RejectedBy")
+                        .HasColumnType("bigint unsigned")
+                        .HasColumnName("rejected_by");
+
+                    b.Property<string>("ResolutionAnswers")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("resolution_answers");
+
+                    b.Property<string>("ResolutionSnapshot")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("resolution_snapshot");
+
+                    b.Property<ulong>("SectorId")
+                        .HasColumnType("bigint unsigned")
+                        .HasColumnName("sector_id");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("started_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTime?>("StoppedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("stopped_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LineId", "StoppedAt");
+
+                    b.HasIndex("SectorId", "Status");
+
+                    b.HasIndex("Status", "OpenedAt");
+
+                    b.ToTable("helpdesk_tickets", (string)null);
+                });
+
             modelBuilder.Entity("MeOne.Domain.Entities.LayoutDecoration", b =>
                 {
                     b.Property<ulong>("Id")
@@ -238,6 +481,93 @@ namespace MeOne.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("line_layouts", (string)null);
+                });
+
+            modelBuilder.Entity("MeOne.Domain.Entities.OeeFormulaSet", b =>
+                {
+                    b.Property<ulong>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint unsigned")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<ulong>("Id"));
+
+                    b.Property<string>("Availability")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)")
+                        .HasColumnName("availability");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("LineAvailability")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)")
+                        .HasColumnName("line_availability");
+
+                    b.Property<string>("LineOee")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)")
+                        .HasColumnName("line_oee");
+
+                    b.Property<string>("LinePerformance")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)")
+                        .HasColumnName("line_performance");
+
+                    b.Property<string>("LineQuality")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)")
+                        .HasColumnName("line_quality");
+
+                    b.Property<string>("MachineOee")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)")
+                        .HasColumnName("machine_oee");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("varchar(60)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Performance")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)")
+                        .HasColumnName("performance");
+
+                    b.Property<string>("Quality")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)")
+                        .HasColumnName("quality");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.Property<ulong>("UpdatedBy")
+                        .HasColumnType("bigint unsigned")
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("oee_formula_sets", (string)null);
                 });
 
             modelBuilder.Entity("MeOne.Domain.Entities.OrgPosition", b =>
@@ -469,6 +799,12 @@ namespace MeOne.Infrastructure.Migrations
                         {
                             Id = "suppliers.manage",
                             Description = "Alterar qualquer fornecedor",
+                            GlobalOnly = false
+                        },
+                        new
+                        {
+                            Id = "helpdesk.manage",
+                            Description = "Montar setores, formulários e modelos de campo do help desk",
                             GlobalOnly = false
                         });
                 });
@@ -790,6 +1126,12 @@ namespace MeOne.Infrastructure.Migrations
                             Id = 12ul,
                             Description = "Gestor de fornecedores: altera qualquer fornecedor",
                             Name = "gestor-fornecedores"
+                        },
+                        new
+                        {
+                            Id = 13ul,
+                            Description = "Gestor do help desk: monta setores, formulários e modelos de campo",
+                            Name = "gestor-helpdesk"
                         });
                 });
 
@@ -1001,6 +1343,12 @@ namespace MeOne.Infrastructure.Migrations
                             Id = 30ul,
                             PermissionCode = "suppliers.manage",
                             RoleId = 12ul
+                        },
+                        new
+                        {
+                            Id = 31ul,
+                            PermissionCode = "helpdesk.manage",
+                            RoleId = 13ul
                         });
                 });
 

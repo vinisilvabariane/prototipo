@@ -249,6 +249,16 @@ Mapa da linha, alocação de pessoas, início e encerramento da produção e pro
 (`lines`, `shifts`, `products`, `layouts`, `runs`). Qualquer usuário logado consulta; cadastros e layouts exigem `engineering.manage`,
 alocar e iniciar exigem `production.supervise` e lançar produção exige `production.execute`. Regras no `AGENTS.md`.
 
+## OEE
+
+Disponibilidade, desempenho e qualidade por posto e por linha, calculados sobre as produções, em `api/v1/oee` (`runs`, `config`, `formulas`).
+Qualquer usuário logado consulta e testa fórmulas; criar, ativar e excluir conjuntos de fórmulas exige `engineering.manage`.
+Paradas e defeitos vêm do help desk (`IOeeLossSource`). Regras no `AGENTS.md`.
+
+## Help desk
+
+Setores com formulário montável (árvore de perguntas com ramificação), formulário de resposta do técnico, abertura e atendimento de chamados, em `api/v1/helpdesk` (`sectors`, `field-templates`, `roles`, `locations`, `tickets`). Qualquer usuário logado abre e acompanha chamados; montar setores exige `helpdesk.manage` (perfil `gestor-helpdesk`); atender depende dos papéis do setor. Chamado com linha parada e defeitos alimentam o OEE. Regras no `AGENTS.md`.
+
 ## Banco de dados local
 
 Pré-requisitos: Docker e .NET 10 SDK. Na pasta `backend/`:

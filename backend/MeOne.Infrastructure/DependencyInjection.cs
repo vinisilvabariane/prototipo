@@ -4,11 +4,13 @@ using MeOne.Application.Interfaces.Users;
 using MeOne.Application.Interfaces.Suppliers;
 using MeOne.Application.Interfaces.WorkInstructions;
 using MeOne.Application.Interfaces.Workflows;
+using MeOne.Domain.Interfaces;
 using MeOne.Domain.Rules;
 using MeOne.Infrastructure.Data.Context;
 using MeOne.Infrastructure.Email;
 using MeOne.Infrastructure.HealthChecks;
 using MeOne.Infrastructure.Identity;
+using MeOne.Infrastructure.Oee;
 using MeOne.Infrastructure.Storage;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -58,6 +60,7 @@ public static class DependencyInjection
         services.AddMeOneDatabase(configuration);
         services.AddIdentity(configuration);
         services.AddWorkflowStorage(configuration);
+        services.AddScoped<IOeeLossSource, HelpdeskOeeLossSource>();
         services.AddMeOneHealthChecks(configuration);
 
         return services;

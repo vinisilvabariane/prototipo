@@ -72,5 +72,9 @@ public static class RoleCatalog
             Permissions.SuppliersRegister,
             Permissions.SuppliersManage,
         ]),
+        new(13, "gestor-helpdesk", "Gestor do help desk: monta setores, formulários e modelos de campo",
+        [
+            Permissions.HelpdeskManage,
+        ]),
     ];
 }

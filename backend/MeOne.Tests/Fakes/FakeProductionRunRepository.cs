@@ -40,6 +40,20 @@ public sealed class FakeProductionRunRepository : InMemoryRepository<ProductionR
         Task.FromResult<IReadOnlyList<ProductionRun>>(
             [.. Filtered(status, lineId).OrderByDescending(run => run.CreatedAt).ThenByDescending(run => run.Id).Skip(skip).Take(take)]);
 
+    public Task<IReadOnlyList<ProductionRun>> SearchStartedAsync(
+        RunStatus? status,
+        ulong? lineId,
+        DateTime from,
+        DateTime to,
+        int take,
+        CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<ProductionRun>>(
+            [.. Filtered(status, lineId)
+                .Where(run => run.StartedAt is { } started && started <= to && (run.EndedAt is null || run.EndedAt >= from))
+                .OrderByDescending(run => run.StartedAt)
+                .ThenByDescending(run => run.Id)
+                .Take(take)]);
+
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken)
     {
         foreach (var run in Items)

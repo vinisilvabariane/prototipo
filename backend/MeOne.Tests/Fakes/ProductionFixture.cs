@@ -1,5 +1,6 @@
 using MeOne.Application.Communication.Production.Requests;
 using MeOne.Application.Interfaces;
+using MeOne.Application.UseCases.Oee;
 using MeOne.Application.UseCases.Production;
 using MeOne.Domain.Entities;
 using MeOne.Domain.Enums;
@@ -36,6 +37,10 @@ public sealed class ProductionFixture
     public FakeLineLayoutRepository Layouts { get; } = new();
 
     public FakeProductionRunRepository Runs { get; } = new();
+
+    public FakeOeeFormulaSetRepository FormulaSets { get; } = new();
+
+    public FakeOeeLossSource LossSource { get; } = new();
 
     public User Supervisor { get; }
 
@@ -94,6 +99,22 @@ public sealed class ProductionFixture
     public ListRunsUseCase ListRuns(ICurrentActor? actor = null) => new(Runs, Lines, Products, Shifts, actor ?? SupervisorActor);
 
     public GetRunUseCase GetRun(ICurrentActor? actor = null) => new(Runs, Lines, Products, Shifts, Access.Users, actor ?? SupervisorActor);
+
+    public GetRunOeeUseCase GetRunOee => new(Runs, Lines, Products, Shifts, FormulaSets, LossSource);
+
+    public ListOeeRunsUseCase ListOeeRuns => new(Runs, Lines, Products, Shifts, FormulaSets, LossSource);
+
+    public GetOeeConfigUseCase GetOeeConfig(ICurrentActor? actor = null) => new(FormulaSets, Access.Users, LossSource, actor ?? SupervisorActor);
+
+    public CreateOeeFormulaSetUseCase CreateFormulaSet => new(FormulaSets, Access.Users, SupervisorActor);
+
+    public UpdateOeeFormulaSetUseCase UpdateFormulaSet => new(FormulaSets, SupervisorActor);
+
+    public DeleteOeeFormulaSetUseCase DeleteFormulaSet => new(FormulaSets);
+
+    public SetActiveOeeFormulaSetUseCase SetActiveFormulaSet => new(FormulaSets);
+
+    public TestOeeFormulaUseCase TestFormula => new(Runs, FormulaSets, LossSource);
 
     public static SaveLayoutPostRequest Post(
         string name,

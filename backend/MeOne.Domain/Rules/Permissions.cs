@@ -27,6 +27,7 @@ public static class Permissions
     public const string OrgChartManage = "orgchart.manage";
     public const string SuppliersRegister = "suppliers.register";
     public const string SuppliersManage = "suppliers.manage";
+    public const string HelpdeskManage = "helpdesk.manage";
 
     public static IReadOnlyList<PermissionDefinition> All { get; } =
     [
@@ -52,6 +53,7 @@ public static class Permissions
         new(OrgChartManage, "Cadastrar e reorganizar os cargos do organograma", GlobalOnly: true),
         new(SuppliersRegister, "Cadastrar fornecedores e manter os que cadastrou", GlobalOnly: false),
         new(SuppliersManage, "Alterar qualquer fornecedor", GlobalOnly: false),
+        new(HelpdeskManage, "Montar setores, formulários e modelos de campo do help desk", GlobalOnly: false),
     ];
 
     private static readonly Dictionary<string, PermissionDefinition> ByCode =

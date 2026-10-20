@@ -17,4 +17,12 @@ public interface IProductionRunRepository : IRepository<ProductionRun, ulong>
     Task<int> CountAsync(RunStatus? status, ulong? lineId, CancellationToken cancellationToken);
 
     Task<IReadOnlyList<ProductionRun>> SearchAsync(RunStatus? status, ulong? lineId, int skip, int take, CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<ProductionRun>> SearchStartedAsync(
+        RunStatus? status,
+        ulong? lineId,
+        DateTime from,
+        DateTime to,
+        int take,
+        CancellationToken cancellationToken);
 }
